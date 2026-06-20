@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useCartStore } from '@/store/cartStore'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productService } from '@/services/productService'
 import api from '@/lib/axios'
 import type { Category } from '@/types'
@@ -17,28 +17,56 @@ export default function Header() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
   const { isAuthenticated, user, logout } = useAuthStore()
   const { cart, setOpen } = useCartStore()
   const navigate = useNavigate()
   const searchRef = useRef<HTMLDivElement>(null)
+  const notifRef = useRef<HTMLDivElement>(null)
+  const qc = useQueryClient()
 
   const { data: categories } = useQuery({
     queryKey: ['root-categories'],
     queryFn: () => api.get<{ data: Category[] }>('/categories').then(r => r.data.data),
-    staleTime: 1000 * 60 * 10,
   })
 
   const { data: suggestions } = useQuery({
     queryKey: ['search-suggest', searchQuery],
     queryFn: () => productService.search(searchQuery, 0, 6).then(r => r.data.data || []),
     enabled: searchQuery.length >= 2,
-    staleTime: 0,
+  })
+
+  // Notification unread count
+  const { data: unreadData } = useQuery({
+    queryKey: ['notif-unread'],
+    queryFn: () => api.get<{ data: { count: number } }>('/notifications/unread-count').then(r => r.data.data?.count ?? 0),
+    enabled: isAuthenticated,
+    refetchInterval: 1000 * 60, // poll mỗi 1 phút
+  })
+  const unreadCount = unreadData ?? 0
+
+  // Notifications list (chỉ fetch khi mở dropdown)
+  const { data: notifData } = useQuery({
+    queryKey: ['notif-list'],
+    queryFn: () => api.get<{ data: any[] }>('/notifications?page=0&size=10').then(r => r.data.data || []),
+    enabled: isAuthenticated && notifOpen,
+  })
+
+  const markAllRead = useMutation({
+    mutationFn: () => api.post('/notifications/read-all'),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['notif-unread'] })
+      qc.invalidateQueries({ queryKey: ['notif-list'] })
+    },
   })
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
         setSearchOpen(false)
+      }
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false)
       }
     }
     document.addEventListener('mousedown', handler)
@@ -153,6 +181,73 @@ export default function Header() {
               <Heart size={20} />
               <span className="text-[10px]">Yêu thích</span>
             </Link>
+          )}
+
+          {/* Notification Bell */}
+          {isAuthenticated && (
+            <div className="relative hidden md:block" ref={notifRef}>
+              <button
+                onClick={() => setNotifOpen(!notifOpen)}
+                className="btn-ghost flex flex-col items-center gap-0.5 px-2 py-1 relative"
+              >
+                <div className="relative">
+                  <Bell size={20} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px]">Thông báo</span>
+              </button>
+
+              {/* Notification dropdown */}
+              {notifOpen && (
+                <div className="absolute right-0 top-full mt-1 w-80 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
+                    <span className="font-semibold text-sm">Thông báo</span>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={() => markAllRead.mutate()}
+                        className="text-xs text-primary-500 hover:underline"
+                      >
+                        Đánh dấu đọc tất cả
+                      </button>
+                    )}
+                  </div>
+                  <div className="max-h-72 overflow-y-auto">
+                    {!notifData || notifData.length === 0 ? (
+                      <div className="text-center py-8 text-gray-400 text-sm">
+                        <Bell size={28} className="mx-auto mb-2 opacity-30" />
+                        Không có thông báo
+                      </div>
+                    ) : (
+                      notifData.map((n: any) => (
+                        <div
+                          key={n.id}
+                          className={`px-4 py-3 border-b last:border-0 hover:bg-gray-50 transition-colors ${!n.isRead ? 'bg-primary-50/40' : ''}`}
+                        >
+                          <p className={`text-sm ${!n.isRead ? 'font-semibold text-gray-800' : 'text-gray-700'}`}>{n.title}</p>
+                          {n.body && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.body}</p>}
+                          <p className="text-[10px] text-gray-400 mt-1">
+                            {new Date(n.createdAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <div className="border-t">
+                    <Link
+                      to="/account/orders"
+                      onClick={() => setNotifOpen(false)}
+                      className="block text-center text-xs text-primary-500 py-2.5 hover:bg-gray-50"
+                    >
+                      Xem đơn hàng của tôi
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Cart */}

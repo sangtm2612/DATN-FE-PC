@@ -11,7 +11,7 @@ export default function DashboardPage() {
 
   const { data: lowStock } = useQuery({
     queryKey: ['low-stock'],
-    queryFn: () => api.get<{ data: any[] }>('/products/low-stock').then(r => r.data.data || []),
+    queryFn: () => api.get<{ data: any[] }>('/admin/products/low-stock').then(r => r.data.data || []),
   })
 
   const statCards = [

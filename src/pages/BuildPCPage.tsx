@@ -12,6 +12,7 @@ interface ComponentType {
   id: number
   name: string
   slug: string
+  categoryId?: number   // ID danh mục linh kiện tương ứng
   isRequired: boolean
   sortOrder: number
 }
@@ -41,9 +42,13 @@ export default function BuildPCPage() {
 
   const { data: productsForType } = useQuery({
     queryKey: ['pc-products-for-type', selectingType?.id],
-    queryFn: () => api.get<{ data: Product[] }>(
-      `/products?categorySlug=${selectingType?.slug}&size=50`
-    ).then(r => r.data.data || []),
+    queryFn: () => {
+      // Ưu tiên dùng categoryId nếu có, fallback sang search theo tên loại linh kiện
+      const params = selectingType?.categoryId
+        ? `/products?categoryId=${selectingType.categoryId}&size=50`
+        : `/products/search?keyword=${encodeURIComponent(selectingType!.name)}&size=50`
+      return api.get<{ data: Product[] }>(params).then(r => r.data.data || [])
+    },
     enabled: !!selectingType,
   })
 

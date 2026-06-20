@@ -1,20 +1,28 @@
 ﻿import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productService } from '@/services/productService'
 import { cartService } from '@/services/cartService'
 import { useCartStore } from '@/store/cartStore'
+import { useAuthStore } from '@/store/authStore'
 import { formatPrice } from '@/lib/utils'
+import api from '@/lib/axios'
 import ProductGrid from '@/components/product/ProductGrid'
-import { ShoppingCart, Zap, Heart, Star, Shield, Truck, RotateCcw, ChevronRight, Minus, Plus } from 'lucide-react'
+import { ShoppingCart, Zap, Heart, Star, Shield, Truck, RotateCcw, ChevronRight, Minus, Plus, User } from 'lucide-react'
 import toast from 'react-hot-toast'
+import type { Review } from '@/types'
 
 export default function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>()
   const [selectedImage, setSelectedImage] = useState(0)
   const [quantity, setQuantity] = useState(1)
   const [activeTab, setActiveTab] = useState<'desc' | 'specs' | 'reviews'>('desc')
+  const [reviewPage, setReviewPage] = useState(0)
+  const [reviewForm, setReviewForm] = useState({ rating: 5, title: '', content: '' })
+  const [showReviewForm, setShowReviewForm] = useState(false)
   const { setCart, setOpen } = useCartStore()
+  const { isAuthenticated } = useAuthStore()
+  const qc = useQueryClient()
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', slug],
@@ -27,11 +35,31 @@ export default function ProductDetailPage() {
     enabled: !!product?.id,
   })
 
+  // Fetch reviews khi tab reviews được mở
+  const { data: reviewData, isLoading: reviewLoading } = useQuery({
+    queryKey: ['reviews', product?.id, reviewPage],
+    queryFn: () => api.get<{ data: Review[]; pagination: any }>(
+      `/reviews/product/${product!.id}?page=${reviewPage}&size=10`
+    ).then(r => r.data),
+    enabled: !!product?.id && activeTab === 'reviews',
+  })
+
   const addToCart = useMutation({
     mutationFn: () => cartService.addItem(product!.id, quantity),
     onSuccess: (res) => {
       if (res.data.data) { setCart(res.data.data); setOpen(true) }
       toast.success('Đã thêm vào giỏ hàng')
+    },
+  })
+
+  const submitReview = useMutation({
+    mutationFn: () => api.post(`/reviews/product/${product!.id}`, reviewForm),
+    onSuccess: () => {
+      toast.success('Cảm ơn bạn đã đánh giá!')
+      setShowReviewForm(false)
+      setReviewForm({ rating: 5, title: '', content: '' })
+      qc.invalidateQueries({ queryKey: ['reviews', product?.id] })
+      qc.invalidateQueries({ queryKey: ['product', slug] })
     },
   })
 
@@ -240,9 +268,154 @@ export default function ProductDetailPage() {
             </div>
           )}
           {activeTab === 'reviews' && (
-            <div className="text-center py-8 text-gray-400">
-              <Star size={48} className="mx-auto mb-3 opacity-30" />
-              <p>Chưa có đánh giá nào</p>
+            <div>
+              {/* Tổng quan rating */}
+              {product.ratingCount > 0 && (
+                <div className="flex items-center gap-6 mb-6 p-4 bg-gray-50 rounded-xl">
+                  <div className="text-center">
+                    <p className="text-5xl font-bold text-gray-800">{product.ratingAvg.toFixed(1)}</p>
+                    <div className="flex justify-center mt-1">
+                      {[1,2,3,4,5].map(i => (
+                        <Star key={i} size={16} className={i <= Math.round(product.ratingAvg) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'} />
+                      ))}
+                    </div>
+                    <p className="text-sm text-gray-500 mt-1">{product.ratingCount} đánh giá</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Nút viết đánh giá */}
+              {isAuthenticated && !showReviewForm && (
+                <button
+                  onClick={() => setShowReviewForm(true)}
+                  className="btn-outline mb-6 flex items-center gap-2"
+                >
+                  <Star size={16} /> Viết đánh giá của bạn
+                </button>
+              )}
+
+              {/* Form đánh giá */}
+              {showReviewForm && (
+                <div className="border rounded-xl p-5 mb-6 bg-gray-50">
+                  <h3 className="font-bold text-gray-800 mb-4">Đánh giá sản phẩm</h3>
+
+                  {/* Stars */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Số sao *</label>
+                    <div className="flex gap-1">
+                      {[1,2,3,4,5].map(star => (
+                        <button key={star} type="button" onClick={() => setReviewForm(f => ({ ...f, rating: star }))}>
+                          <Star size={28}
+                            className={star <= reviewForm.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300 hover:text-yellow-300'}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tiêu đề</label>
+                    <input
+                      value={reviewForm.title}
+                      onChange={e => setReviewForm(f => ({ ...f, title: e.target.value }))}
+                      className="input"
+                      placeholder="Tóm tắt đánh giá của bạn..."
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nội dung đánh giá</label>
+                    <textarea
+                      value={reviewForm.content}
+                      onChange={e => setReviewForm(f => ({ ...f, content: e.target.value }))}
+                      className="input h-24 resize-none"
+                      placeholder="Chia sẻ trải nghiệm sử dụng sản phẩm..."
+                    />
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowReviewForm(false)}
+                      className="btn-outline px-5 py-2"
+                    >Hủy</button>
+                    <button
+                      onClick={() => submitReview.mutate()}
+                      disabled={submitReview.isPending}
+                      className="btn-primary px-5 py-2"
+                    >
+                      {submitReview.isPending ? 'Đang gửi...' : 'Gửi đánh giá'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Danh sách reviews */}
+              {reviewLoading ? (
+                <div className="space-y-4">
+                  {[...Array(3)].map((_,i) => (
+                    <div key={i} className="border rounded-xl p-4 space-y-2">
+                      <div className="skeleton h-4 rounded w-1/3" />
+                      <div className="skeleton h-3 rounded w-full" />
+                      <div className="skeleton h-3 rounded w-2/3" />
+                    </div>
+                  ))}
+                </div>
+              ) : reviewData?.data && reviewData.data.length > 0 ? (
+                <div className="space-y-4">
+                  {reviewData.data.map((review: Review) => (
+                    <div key={review.id} className="border rounded-xl p-4">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-9 h-9 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center font-bold text-sm flex-shrink-0">
+                          {review.user?.fullName?.[0] ?? <User size={16} />}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-sm text-gray-800">{review.user?.fullName}</p>
+                          <div className="flex items-center gap-2">
+                            <div className="flex">
+                              {[1,2,3,4,5].map(i => (
+                                <Star key={i} size={12} className={i <= review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'} />
+                              ))}
+                            </div>
+                            {review.isVerifiedPurchase && (
+                              <span className="text-[10px] bg-green-100 text-green-600 px-1.5 py-0.5 rounded font-medium">Đã mua hàng</span>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-xs text-gray-400 flex-shrink-0">
+                          {new Date(review.createdAt).toLocaleDateString('vi-VN')}
+                        </span>
+                      </div>
+                      {review.title && <p className="font-medium text-sm text-gray-800 mb-1">{review.title}</p>}
+                      {review.content && <p className="text-sm text-gray-600 leading-relaxed">{review.content}</p>}
+                    </div>
+                  ))}
+
+                  {/* Pagination reviews */}
+                  {reviewData.pagination && reviewData.pagination.totalPages > 1 && (
+                    <div className="flex justify-center gap-2 mt-4">
+                      {Array.from({ length: reviewData.pagination.totalPages }, (_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setReviewPage(i)}
+                          className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors
+                            ${reviewPage === i ? 'bg-primary-500 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}
+                        >
+                          {i + 1}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-10 text-gray-400">
+                  <Star size={40} className="mx-auto mb-3 opacity-20" />
+                  <p className="font-medium">Chưa có đánh giá nào</p>
+                  <p className="text-sm mt-1">Hãy là người đầu tiên đánh giá sản phẩm này!</p>
+                  {!isAuthenticated && (
+                    <Link to="/login" className="inline-block mt-3 text-sm text-primary-500 hover:underline">
+                      Đăng nhập để đánh giá
+                    </Link>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

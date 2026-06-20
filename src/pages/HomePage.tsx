@@ -20,7 +20,6 @@ export default function HomePage() {
   const { data: homeData, isLoading } = useQuery({
     queryKey: ['home'],
     queryFn: () => productService.getHomeData().then(r => r.data.data),
-    staleTime: 1000 * 60 * 5,
   })
 
   return (

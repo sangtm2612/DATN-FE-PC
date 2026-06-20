@@ -1,6 +1,8 @@
 import { Outlet, NavLink } from 'react-router-dom'
 import { User, MapPin, ShoppingBag, Heart, Shield } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
+import { useQuery } from '@tanstack/react-query'
+import api from '@/lib/axios'
 
 const navItems = [
   { to: '/account/profile',    label: 'Thông tin tài khoản', icon: User },
@@ -11,7 +13,16 @@ const navItems = [
 ]
 
 export default function AccountPage() {
-  const { user } = useAuthStore()
+  const { user, updateUser } = useAuthStore()
+
+  // Sync user mới nhất từ server khi vào trang tài khoản
+  useQuery({
+    queryKey: ['me'],
+    queryFn: () => api.get<{ data: any }>('/users/me').then(r => {
+      if (r.data.data) updateUser(r.data.data)
+      return r.data.data
+    }),
+  })
 
   return (
     <div className="container py-8">
