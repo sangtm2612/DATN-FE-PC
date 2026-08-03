@@ -1,5 +1,5 @@
 import api from '@/lib/axios'
-import type { Product, ApiResponse } from '@/types'
+import type { Product, ApiResponse, Tag } from '@/types'
 
 export interface ProductFilter {
   categoryId?: number
@@ -34,6 +34,15 @@ export const productService = {
 
   getRelated: (id: number, limit = 8) =>
     api.get<ApiResponse<Product[]>>(`/products/${id}/related?limit=${limit}`),
+
+  getCuratedRelated: (id: number) =>
+    api.get<ApiResponse<Product[]>>(`/products/${id}/related?limit=8&curatedOnly=true`),
+
+  updateTags: (id: number, tagIds: number[]) =>
+    api.put<ApiResponse<void>>(`/products/${id}/tags`, tagIds),
+
+  updateRelated: (id: number, relatedProductIds: number[]) =>
+    api.put<ApiResponse<void>>(`/products/${id}/related`, relatedProductIds),
 
   getHomeData: () =>
     api.get<ApiResponse<{

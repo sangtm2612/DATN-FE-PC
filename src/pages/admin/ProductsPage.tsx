@@ -1,13 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productService } from '@/services/productService'
+import { tagService } from '@/services/tagService'
 import { formatPrice } from '@/lib/utils'
 import Pagination from '@/components/common/Pagination'
 import { Plus, Edit, Eye, Search, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api from '@/lib/axios'
-import type { Product, Category, Brand } from '@/types'
+import type { Product, Category, Brand, Tag } from '@/types'
 
 interface ProductForm {
   name: string
@@ -60,6 +61,10 @@ export default function AdminProductsPage() {
   const [showModal, setShowModal] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [form, setForm] = useState<ProductForm>(emptyForm)
+  const [tagSearch, setTagSearch] = useState('')
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([])
+  const [relatedSearch, setRelatedSearch] = useState('')
+  const [selectedRelated, setSelectedRelated] = useState<Product[]>([])
   const qc = useQueryClient()
 
   const { data, isLoading } = useQuery({
@@ -78,6 +83,48 @@ export default function AdminProductsPage() {
     queryKey: ['admin-brands-select'],
     queryFn: () => api.get<{ data: Brand[] }>('/brands').then(r => r.data.data || []),
   })
+
+  const { data: allTags } = useQuery({
+    queryKey: ['admin-tags-all'],
+    queryFn: () => tagService.search().then(r => r.data.data || []),
+  })
+
+  const { data: tagSuggestions } = useQuery({
+    queryKey: ['admin-tag-search', tagSearch],
+    queryFn: () => tagService.search(tagSearch).then(r => r.data.data || []),
+    enabled: tagSearch.trim().length > 0,
+  })
+
+  const { data: curatedRelated } = useQuery({
+    queryKey: ['admin-curated-related', editingProduct?.id],
+    queryFn: () => productService.getCuratedRelated(editingProduct!.id).then(r => r.data.data || []),
+    enabled: !!editingProduct?.id,
+  })
+
+  const { data: relatedSuggestions } = useQuery({
+    queryKey: ['admin-related-search', relatedSearch],
+    queryFn: () => productService.search(relatedSearch, 0, 10).then(r => r.data.data || []),
+    enabled: relatedSearch.trim().length > 0,
+  })
+
+  // List/search results don't include `tags` (avoids N+1 on the BE) — fetch
+  // the full detail response (which does) so editing doesn't wipe existing tags.
+  const { data: editingProductDetail } = useQuery({
+    queryKey: ['admin-product-detail', editingProduct?.slug],
+    queryFn: () => productService.getBySlug(editingProduct!.slug).then(r => r.data.data),
+    enabled: !!editingProduct?.slug,
+  })
+
+  useEffect(() => {
+    if (editingProductDetail && allTags) {
+      const names = new Set(editingProductDetail.tags || [])
+      setSelectedTags(allTags.filter(t => names.has(t.name)))
+    }
+  }, [editingProductDetail, allTags])
+
+  useEffect(() => {
+    if (curatedRelated) setSelectedRelated(curatedRelated)
+  }, [curatedRelated])
 
   const saveProduct = useMutation({
     mutationFn: () => {
@@ -108,6 +155,40 @@ export default function AdminProductsPage() {
     },
   })
 
+  const saveTags = useMutation({
+    mutationFn: () => productService.updateTags(editingProduct!.id, selectedTags.map(t => t.id)),
+    onSuccess: () => toast.success('Đã lưu tags'),
+  })
+
+  const saveRelated = useMutation({
+    mutationFn: () => productService.updateRelated(editingProduct!.id, selectedRelated.map(p => p.id)),
+    onSuccess: () => {
+      toast.success('Đã lưu sản phẩm liên quan')
+      qc.invalidateQueries({ queryKey: ['admin-curated-related', editingProduct?.id] })
+    },
+  })
+
+  const addTag = (t: Tag) => {
+    if (!selectedTags.some(x => x.id === t.id)) setSelectedTags(s => [...s, t])
+    setTagSearch('')
+  }
+  const removeTag = (id: number) => setSelectedTags(s => s.filter(t => t.id !== id))
+  const createAndAddTag = () => {
+    const name = tagSearch.trim()
+    if (!name) return
+    tagService.create(name).then(r => {
+      if (r.data.data) addTag(r.data.data)
+      qc.invalidateQueries({ queryKey: ['admin-tags-all'] })
+    }).catch(() => toast.error('Không thể tạo tag'))
+  }
+
+  const addRelated = (p: Product) => {
+    if (selectedRelated.length >= 8) { toast.error('Tối đa 8 sản phẩm liên quan'); return }
+    if (!selectedRelated.some(x => x.id === p.id)) setSelectedRelated(s => [...s, p])
+    setRelatedSearch('')
+  }
+  const removeRelated = (id: number) => setSelectedRelated(s => s.filter(p => p.id !== id))
+
   const openCreate = () => {
     setEditingProduct(null)
     setForm(emptyForm)
@@ -124,6 +205,10 @@ export default function AdminProductsPage() {
     setShowModal(false)
     setEditingProduct(null)
     setForm(emptyForm)
+    setTagSearch('')
+    setSelectedTags([])
+    setRelatedSearch('')
+    setSelectedRelated([])
   }
 
   const set = (key: keyof ProductForm, value: string | boolean) =>
@@ -340,6 +425,83 @@ export default function AdminProductsPage() {
                     <span className="text-sm font-medium text-gray-700">Sản phẩm nổi bật</span>
                   </label>
                 </div>
+
+                {/* Tags & sản phẩm liên quan — chỉ khi đang sửa sản phẩm đã tồn tại */}
+                {editingProduct && (
+                  <>
+                    <div className="sm:col-span-2 border-t pt-4 mt-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {selectedTags.map(t => (
+                          <span key={t.id} className="inline-flex items-center gap-1 bg-primary-50 text-primary-700 text-xs px-2 py-1 rounded-full">
+                            {t.name}
+                            <button type="button" onClick={() => removeTag(t.id)}><X size={12} /></button>
+                          </span>
+                        ))}
+                        {!selectedTags.length && <span className="text-xs text-gray-400">Chưa có tag nào</span>}
+                      </div>
+                      <div className="relative">
+                        <input value={tagSearch} onChange={e => setTagSearch(e.target.value)}
+                          placeholder="Tìm hoặc tạo tag mới..." className="input" />
+                        {tagSearch.trim() && (
+                          <div className="absolute z-10 mt-1 w-full bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                            {(tagSuggestions || []).filter(t => !selectedTags.some(s => s.id === t.id)).map(t => (
+                              <button key={t.id} type="button" onClick={() => addTag(t)}
+                                className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-50">{t.name}</button>
+                            ))}
+                            {!(tagSuggestions || []).some(t => t.name.toLowerCase() === tagSearch.trim().toLowerCase()) && (
+                              <button type="button" onClick={createAndAddTag}
+                                className="block w-full text-left px-3 py-2 text-sm text-primary-600 hover:bg-primary-50 border-t">
+                                + Tạo tag "{tagSearch.trim()}"
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <button type="button" onClick={() => saveTags.mutate()} disabled={saveTags.isPending}
+                        className="btn-outline text-xs px-3 py-1.5 mt-2">
+                        {saveTags.isPending ? 'Đang lưu...' : 'Lưu tags'}
+                      </button>
+                    </div>
+
+                    <div className="sm:col-span-2 border-t pt-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Sản phẩm liên quan ({selectedRelated.length}/8)
+                      </label>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {selectedRelated.map(p => (
+                          <span key={p.id} className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full">
+                            {p.name}
+                            <button type="button" onClick={() => removeRelated(p.id)}><X size={12} /></button>
+                          </span>
+                        ))}
+                        {!selectedRelated.length && <span className="text-xs text-gray-400">Chưa gán sản phẩm liên quan</span>}
+                      </div>
+                      {selectedRelated.length >= 8 && (
+                        <p className="text-xs text-amber-600 mb-2">Đã đạt tối đa 8 sản phẩm liên quan.</p>
+                      )}
+                      <div className="relative">
+                        <input value={relatedSearch} onChange={e => setRelatedSearch(e.target.value)}
+                          placeholder="Tìm sản phẩm để thêm..." className="input"
+                          disabled={selectedRelated.length >= 8} />
+                        {relatedSearch.trim() && (
+                          <div className="absolute z-10 mt-1 w-full bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                            {(relatedSuggestions || [])
+                              .filter(p => p.id !== editingProduct.id && !selectedRelated.some(s => s.id === p.id))
+                              .map(p => (
+                                <button key={p.id} type="button" onClick={() => addRelated(p)}
+                                  className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-50">{p.name}</button>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+                      <button type="button" onClick={() => saveRelated.mutate()} disabled={saveRelated.isPending}
+                        className="btn-outline text-xs px-3 py-1.5 mt-2">
+                        {saveRelated.isPending ? 'Đang lưu...' : 'Lưu sản phẩm liên quan'}
+                      </button>
+                    </div>
+                  </>
+                )}
 
                 {/* Preview thumbnail */}
                 {form.thumbnail && (

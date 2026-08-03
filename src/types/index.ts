@@ -85,6 +85,13 @@ export interface Product {
   brand?: { id: number; name: string; slug: string; logoUrl?: string }
   images?: ProductImage[]
   attributeGroups?: AttributeGroup[]
+  tags?: string[]
+}
+
+export interface Tag {
+  id: number
+  name: string
+  slug: string
 }
 
 // ─── Cart ────────────────────────────────────────────────────
