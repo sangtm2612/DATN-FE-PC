@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: kinhduanpc-frontend
+    runtime: static
+    buildCommand: npm ci --legacy-peer-deps && npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://kl-be-kfm0.onrender.com/api/*
+      - type: rewrite
+        source: /*
+        destination: /index.html
