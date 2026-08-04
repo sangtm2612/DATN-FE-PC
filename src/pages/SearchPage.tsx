@@ -12,7 +12,7 @@ export default function SearchPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['search', keyword, page],
-    queryFn: () => productService.search(keyword, page, 24).then(r => r.data),
+    queryFn: () => productService.search(keyword, page, 24, page === 0).then(r => r.data),
     enabled: keyword.length > 0,
   })
 

@@ -22,6 +22,11 @@ export default function HomePage() {
     queryFn: () => productService.getHomeData().then(r => r.data.data),
   })
 
+  const { data: recentlyViewed } = useQuery({
+    queryKey: ['recently-viewed'],
+    queryFn: () => productService.getRecentlyViewed().then(r => r.data.data || []),
+  })
+
   return (
     <div>
       {/* Hero Slider */}
@@ -147,6 +152,14 @@ export default function HomePage() {
             </div>
             <ProductGrid products={homeData.onSaleProducts} />
           </div>
+        </section>
+      )}
+
+      {/* Recently viewed */}
+      {!!recentlyViewed?.length && (
+        <section className="container py-8">
+          <h2 className="section-title">Sản phẩm đã xem</h2>
+          <ProductGrid products={recentlyViewed} cols={5} />
         </section>
       )}
 

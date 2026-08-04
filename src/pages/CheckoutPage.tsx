@@ -1,9 +1,9 @@
-﻿import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+﻿import { useState, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { useCartStore } from '@/store/cartStore'
 import { useAuthStore } from '@/store/authStore'
 import { orderService, type CreateOrderPayload } from '@/services/orderService'
@@ -11,7 +11,8 @@ import { formatPrice } from '@/lib/utils'
 import { PAYMENT_METHOD_LABEL } from '@/lib/utils'
 import api from '@/lib/axios'
 import toast from 'react-hot-toast'
-import { CreditCard, Banknote, Smartphone, Tag } from 'lucide-react'
+import type { ShippingMethod, Store } from '@/types'
+import { CreditCard, Banknote, Smartphone, Tag, Truck, Store as StoreIcon } from 'lucide-react'
 
 const schema = z.object({
   shippingName:     z.string().min(2, 'Họ tên tối thiểu 2 ký tự'),
@@ -36,10 +37,47 @@ export default function CheckoutPage() {
   const { cart } = useCartStore()
   const { user } = useAuthStore()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const buildId = searchParams.get('buildId')
   const [paymentMethod, setPaymentMethod] = useState('cod')
   const [voucherCode, setVoucherCode] = useState('')
   const [voucherApplied, setVoucherApplied] = useState<any>(null)
-  const [shippingFee] = useState(30_000)
+  const [shippingMethodId, setShippingMethodId] = useState<number | null>(null)
+  const [deliveryMode, setDeliveryMode] = useState<'ship' | 'pickup'>('ship')
+  const [pickupStoreId, setPickupStoreId] = useState<number | null>(null)
+
+  const { data: shippingMethods } = useQuery({
+    queryKey: ['shipping-methods'],
+    queryFn: () => api.get<{ data: ShippingMethod[] }>('/shipping-methods').then(r => r.data.data || []),
+  })
+
+  const { data: stores } = useQuery({
+    queryKey: ['stores'],
+    queryFn: () => api.get<{ data: Store[] }>('/stores').then(r => r.data.data || []),
+  })
+
+  useEffect(() => {
+    if (shippingMethods?.length && shippingMethodId === null) {
+      setShippingMethodId(shippingMethods[0].id)
+    }
+  }, [shippingMethods, shippingMethodId])
+
+  useEffect(() => {
+    if (deliveryMode === 'pickup' && stores?.length && pickupStoreId === null) {
+      setPickupStoreId(stores[0].id)
+    }
+  }, [deliveryMode, stores, pickupStoreId])
+
+  const isFreeShippingVoucher = voucherApplied?.discountType === 'free_shipping'
+  const selectedMethod = shippingMethods?.find(m => m.id === shippingMethodId)
+  const shippingFee = deliveryMode === 'pickup'
+    ? 0
+    : isFreeShippingVoucher
+      ? 0
+      : selectedMethod
+        ? (selectedMethod.freeThreshold != null && cart.totalAmount >= selectedMethod.freeThreshold
+            ? 0 : selectedMethod.baseFee)
+        : 30_000
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -67,11 +105,13 @@ export default function CheckoutPage() {
     },
   })
 
-  const discount = voucherApplied
-    ? voucherApplied.discountType === 'percent'
+  const voucherDiscount = !voucherApplied || isFreeShippingVoucher
+    ? 0
+    : voucherApplied.discountType === 'percent'
       ? cart.totalAmount * voucherApplied.discountValue / 100
       : voucherApplied.discountValue
-    : 0
+  const autoDiscount = cart.autoDiscount || 0
+  const discount = Math.min(voucherDiscount + autoDiscount, cart.totalAmount)
 
   const total = cart.totalAmount + shippingFee - discount
 
@@ -80,6 +120,9 @@ export default function CheckoutPage() {
       ...formData,
       paymentMethod,
       voucherCode: voucherApplied ? voucherCode : undefined,
+      buildId: buildId ? Number(buildId) : undefined,
+      shippingMethodId: deliveryMode === 'ship' ? (shippingMethodId ?? undefined) : undefined,
+      pickupStoreId: deliveryMode === 'pickup' ? (pickupStoreId ?? undefined) : undefined,
     })
   }
 
@@ -202,7 +245,77 @@ export default function CheckoutPage() {
                     className="btn-primary px-4 py-2 text-sm">Áp dụng</button>
                 )}
               </div>
-              {voucherApplied && <p className="text-green-600 text-xs mt-2">✓ Đã áp dụng: giảm {formatPrice(discount)}</p>}
+              {voucherApplied && (
+                <p className="text-green-600 text-xs mt-2">
+                  ✓ Đã áp dụng: {isFreeShippingVoucher ? 'miễn phí vận chuyển' : `giảm ${formatPrice(voucherDiscount)}`}
+                </p>
+              )}
+            </div>
+
+            {/* Delivery mode */}
+            <div className="card p-5">
+              <h3 className="font-semibold mb-3 flex items-center gap-2"><Truck size={16} /> Nhận hàng</h3>
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <button type="button" onClick={() => setDeliveryMode('ship')}
+                  className={`py-2 rounded-lg text-sm font-medium border-2 transition-colors
+                    ${deliveryMode === 'ship' ? 'border-primary-500 bg-primary-50 text-primary-600' : 'border-gray-200 text-gray-600'}`}>
+                  Giao tận nơi
+                </button>
+                <button type="button" onClick={() => setDeliveryMode('pickup')}
+                  className={`py-2 rounded-lg text-sm font-medium border-2 transition-colors
+                    ${deliveryMode === 'pickup' ? 'border-primary-500 bg-primary-50 text-primary-600' : 'border-gray-200 text-gray-600'}`}>
+                  Nhận tại showroom
+                </button>
+              </div>
+
+              {deliveryMode === 'ship' && !!shippingMethods?.length && (
+                <div className="space-y-2">
+                  {shippingMethods.map(m => (
+                    <label key={m.id}
+                      className={`flex items-center justify-between gap-2 p-3 border-2 rounded-xl cursor-pointer transition-colors
+                        ${shippingMethodId === m.id ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <input type="radio" name="shippingMethod" checked={shippingMethodId === m.id}
+                          onChange={() => setShippingMethodId(m.id)} className="sr-only" />
+                        <div>
+                          <p className="text-sm font-medium">{m.name}</p>
+                          {m.estimatedDays && <p className="text-xs text-gray-400">{m.estimatedDays}</p>}
+                        </div>
+                      </div>
+                      <span className="text-sm font-semibold text-primary-500">
+                        {isFreeShippingVoucher || (m.freeThreshold != null && cart.totalAmount >= m.freeThreshold)
+                          ? 'Miễn phí' : formatPrice(m.baseFee)}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+
+              {deliveryMode === 'pickup' && (
+                <div>
+                  {!stores?.length ? (
+                    <p className="text-sm text-gray-400">Đang tải danh sách showroom...</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {stores.map(s => (
+                        <label key={s.id}
+                          className={`flex items-start gap-2 p-3 border-2 rounded-xl cursor-pointer transition-colors
+                            ${pickupStoreId === s.id ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'}`}
+                        >
+                          <input type="radio" name="pickupStore" checked={pickupStoreId === s.id}
+                            onChange={() => setPickupStoreId(s.id)} className="sr-only mt-0.5" />
+                          <StoreIcon size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-medium">{s.name}</p>
+                            <p className="text-xs text-gray-400">{s.address}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Total */}
@@ -213,9 +326,14 @@ export default function CheckoutPage() {
               <div className="flex justify-between text-sm text-gray-600">
                 <span>Phí vận chuyển:</span><span>{formatPrice(shippingFee)}</span>
               </div>
-              {discount > 0 && (
+              {autoDiscount > 0 && (
                 <div className="flex justify-between text-sm text-green-600">
-                  <span>Giảm giá:</span><span>-{formatPrice(discount)}</span>
+                  <span>Khuyến mãi tự động:</span><span>-{formatPrice(autoDiscount)}</span>
+                </div>
+              )}
+              {voucherDiscount > 0 && (
+                <div className="flex justify-between text-sm text-green-600">
+                  <span>Voucher:</span><span>-{formatPrice(voucherDiscount)}</span>
                 </div>
               )}
               <div className="flex justify-between font-bold text-lg border-t pt-3">

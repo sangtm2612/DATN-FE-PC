@@ -5,6 +5,7 @@ import type { BlogPost } from '@/types'
 import { formatDate } from '@/lib/utils'
 import { Calendar, Eye, User, ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import ProductGrid from '@/components/product/ProductGrid'
 
 export default function BlogDetailPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -86,6 +87,13 @@ export default function BlogDetailPage() {
         className="prose prose-lg max-w-none prose-headings:text-gray-800 prose-a:text-primary-500 prose-img:rounded-xl"
         dangerouslySetInnerHTML={{ __html: post.content || '' }}
       />
+
+      {!!post.mentionedProducts?.length && (
+        <section className="mt-10 pt-8 border-t">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Sản phẩm nhắc đến trong bài</h2>
+          <ProductGrid products={post.mentionedProducts} cols={4} />
+        </section>
+      )}
     </div>
   )
 }

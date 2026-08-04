@@ -107,10 +107,16 @@ export default function CartPage() {
                 <span>Phí vận chuyển:</span>
                 <span className="text-green-600">Tính lúc thanh toán</span>
               </div>
+              {!!cart.autoDiscount && (
+                <div className="flex justify-between text-green-600">
+                  <span>Khuyến mãi tự động:</span>
+                  <span>-{formatPrice(cart.autoDiscount)}</span>
+                </div>
+              )}
             </div>
             <div className="flex justify-between font-bold text-lg border-t pt-3">
               <span>Tổng:</span>
-              <span className="text-primary-500">{formatPrice(cart.totalAmount)}</span>
+              <span className="text-primary-500">{formatPrice(cart.totalAmount - (cart.autoDiscount || 0))}</span>
             </div>
             <button
               onClick={() => navigate('/checkout')}

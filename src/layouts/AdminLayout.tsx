@@ -2,28 +2,33 @@
 import { useState } from 'react'
 import {
   LayoutDashboard, Package, ShoppingCart, Tag, Layers,
-  Image, FileText, MapPin, Ticket, LogOut, Menu, X,
+  Image, FileText, MapPin, Ticket, Percent, Warehouse, Wrench, Undo2, LogOut, Menu, X,
   ChevronRight, Bell
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import toast from 'react-hot-toast'
 
 const navItems = [
-  { to: '/admin',            label: 'Dashboard',    icon: LayoutDashboard, exact: true },
-  { to: '/admin/products',   label: 'Sản phẩm',     icon: Package },
-  { to: '/admin/orders',     label: 'Đơn hàng',     icon: ShoppingCart },
-  { to: '/admin/categories', label: 'Danh mục',     icon: Layers },
-  { to: '/admin/brands',     label: 'Thương hiệu',  icon: Tag },
-  { to: '/admin/vouchers',   label: 'Voucher',      icon: Ticket },
-  { to: '/admin/banners',    label: 'Banner',       icon: Image },
-  { to: '/admin/blog',       label: 'Blog',         icon: FileText },
-  { to: '/admin/stores',     label: 'Cửa hàng',     icon: MapPin },
+  { to: '/admin',            label: 'Dashboard',    icon: LayoutDashboard, exact: true, roles: ['admin', 'staff'] },
+  { to: '/admin/products',   label: 'Sản phẩm',     icon: Package,         roles: ['admin', 'staff'] },
+  { to: '/admin/orders',     label: 'Đơn hàng',     icon: ShoppingCart,    roles: ['admin', 'staff'] },
+  { to: '/admin/categories', label: 'Danh mục',     icon: Layers,          roles: ['admin', 'staff'] },
+  { to: '/admin/brands',     label: 'Thương hiệu',  icon: Tag,             roles: ['admin', 'staff'] },
+  { to: '/admin/vouchers',   label: 'Voucher',      icon: Ticket,          roles: ['admin', 'staff'] },
+  { to: '/admin/promotions', label: 'Khuyến mãi',   icon: Percent,         roles: ['admin', 'staff'] },
+  { to: '/admin/banners',    label: 'Banner',       icon: Image,           roles: ['admin', 'staff'] },
+  { to: '/admin/blog',       label: 'Blog',         icon: FileText,        roles: ['admin', 'staff'] },
+  { to: '/admin/stores',     label: 'Cửa hàng',     icon: MapPin,          roles: ['admin', 'staff'] },
+  { to: '/admin/store-stock', label: 'Tồn kho showroom', icon: Warehouse,  roles: ['admin', 'staff'] },
+  { to: '/admin/service-requests', label: 'Yêu cầu sửa chữa', icon: Wrench, roles: ['admin', 'staff', 'technician'] },
+  { to: '/admin/return-requests', label: 'Đổi/trả hàng', icon: Undo2, roles: ['admin', 'staff'] },
 ]
 
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
+  const visibleNavItems = navItems.filter(item => item.roles.includes(user?.role || ''))
 
   const handleLogout = () => {
     logout()
@@ -45,7 +50,7 @@ export default function AdminLayout() {
 
         {/* Nav */}
         <nav className="flex-1 py-4 overflow-y-auto">
-          {navItems.map(({ to, label, icon: Icon, exact }) => (
+          {visibleNavItems.map(({ to, label, icon: Icon, exact }) => (
             <NavLink
               key={to}
               to={to}

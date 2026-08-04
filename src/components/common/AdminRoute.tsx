@@ -4,6 +4,6 @@ import { useAuthStore } from '@/store/authStore'
 export default function AdminRoute() {
   const { isAuthenticated, user } = useAuthStore()
   if (!isAuthenticated) return <Navigate to="/login" replace />
-  if (user?.role !== 'admin' && user?.role !== 'staff') return <Navigate to="/" replace />
+  if (user?.role !== 'admin' && user?.role !== 'staff' && user?.role !== 'technician') return <Navigate to="/" replace />
   return <Outlet />
 }

@@ -8,7 +8,7 @@ import { useAuthStore } from '@/store/authStore'
 import { formatPrice } from '@/lib/utils'
 import api from '@/lib/axios'
 import ProductGrid from '@/components/product/ProductGrid'
-import { ShoppingCart, Zap, Heart, Star, Shield, Truck, RotateCcw, ChevronRight, Minus, Plus, User } from 'lucide-react'
+import { ShoppingCart, Zap, Heart, Star, Shield, Truck, RotateCcw, ChevronRight, Minus, Plus, User, ThumbsUp } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Review } from '@/types'
 
@@ -20,6 +20,8 @@ export default function ProductDetailPage() {
   const [reviewPage, setReviewPage] = useState(0)
   const [reviewForm, setReviewForm] = useState({ rating: 5, title: '', content: '' })
   const [showReviewForm, setShowReviewForm] = useState(false)
+  const [showStoreStock, setShowStoreStock] = useState(false)
+  const [helpfulState, setHelpfulState] = useState<Record<number, { isHelpful: boolean; count: number }>>({})
   const { setCart, setOpen } = useCartStore()
   const { isAuthenticated } = useAuthStore()
   const qc = useQueryClient()
@@ -33,6 +35,19 @@ export default function ProductDetailPage() {
     queryKey: ['related', product?.id],
     queryFn: () => productService.getRelated(product!.id).then(r => r.data.data || []),
     enabled: !!product?.id,
+  })
+
+  const { data: recentlyViewed } = useQuery({
+    queryKey: ['recently-viewed'],
+    queryFn: () => productService.getRecentlyViewed().then(r => r.data.data || []),
+  })
+
+  const { data: storeStock, isLoading: storeStockLoading } = useQuery({
+    queryKey: ['product-stock-by-store', product?.id],
+    queryFn: () => api.get<{ data: { store: { id: number; name: string; address: string }; stockQty: number }[] }>(
+      `/products/${product!.id}/stock-by-store`
+    ).then(r => r.data.data || []),
+    enabled: !!product?.id && showStoreStock,
   })
 
   // Fetch reviews khi tab reviews được mở
@@ -60,6 +75,17 @@ export default function ProductDetailPage() {
       setReviewForm({ rating: 5, title: '', content: '' })
       qc.invalidateQueries({ queryKey: ['reviews', product?.id] })
       qc.invalidateQueries({ queryKey: ['product', slug] })
+    },
+  })
+
+  const toggleHelpful = useMutation({
+    mutationFn: (reviewId: number) =>
+      api.post<{ data: { helpfulCount: number; isHelpful: boolean } }>(`/reviews/${reviewId}/helpful`),
+    onSuccess: (res, reviewId) => {
+      setHelpfulState(prev => ({
+        ...prev,
+        [reviewId]: { isHelpful: res.data.data.isHelpful, count: res.data.data.helpfulCount },
+      }))
     },
   })
 
@@ -167,6 +193,35 @@ export default function ProductDetailPage() {
               <div className={`w-2 h-2 rounded-full ${product.stockQty > 0 ? 'bg-blue-500' : 'bg-red-500'}`} />
               {product.stockQty > 0 ? `Còn ${product.stockQty} sản phẩm` : 'Hết hàng'}
             </div>
+          </div>
+
+          {/* Nhận tại showroom */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowStoreStock(v => !v)}
+              className="text-sm text-primary-500 hover:underline flex items-center gap-1.5"
+            >
+              <Truck size={14} /> Kiểm tra hàng tại showroom
+            </button>
+            {showStoreStock && (
+              <div className="mt-2 border rounded-lg p-3 text-sm">
+                {storeStockLoading ? (
+                  <p className="text-gray-400">Đang tải...</p>
+                ) : !storeStock?.length ? (
+                  <p className="text-gray-400">Hiện chưa có showroom nào còn hàng sản phẩm này</p>
+                ) : (
+                  <ul className="space-y-1.5">
+                    {storeStock.map(s => (
+                      <li key={s.store.id} className="flex items-center justify-between gap-2">
+                        <span className="text-gray-700">{s.store.name}</span>
+                        <span className="text-green-600 font-medium flex-shrink-0">Còn {s.stockQty}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Quantity */}
@@ -385,6 +440,18 @@ export default function ProductDetailPage() {
                       </div>
                       {review.title && <p className="font-medium text-sm text-gray-800 mb-1">{review.title}</p>}
                       {review.content && <p className="text-sm text-gray-600 leading-relaxed">{review.content}</p>}
+                      <button
+                        onClick={() => {
+                          if (!isAuthenticated) { toast.error('Vui lòng đăng nhập để đánh giá hữu ích'); return }
+                          toggleHelpful.mutate(review.id)
+                        }}
+                        disabled={toggleHelpful.isPending && toggleHelpful.variables === review.id}
+                        className={`mt-2 flex items-center gap-1.5 text-xs font-medium transition-colors
+                          ${helpfulState[review.id]?.isHelpful ? 'text-primary-500' : 'text-gray-400 hover:text-primary-500'}`}
+                      >
+                        <ThumbsUp size={13} className={helpfulState[review.id]?.isHelpful ? 'fill-primary-500' : ''} />
+                        Hữu ích ({helpfulState[review.id]?.count ?? review.helpfulCount})
+                      </button>
                     </div>
                   ))}
 
@@ -428,6 +495,17 @@ export default function ProductDetailPage() {
           <ProductGrid products={related} cols={4} />
         </section>
       )}
+
+      {/* Recently viewed */}
+      {(() => {
+        const others = (recentlyViewed || []).filter(p => p.id !== product.id)
+        return others.length > 0 ? (
+          <section className="mt-8">
+            <h2 className="section-title">Sản phẩm đã xem</h2>
+            <ProductGrid products={others} cols={5} />
+          </section>
+        ) : null
+      })()}
     </div>
   )
 }

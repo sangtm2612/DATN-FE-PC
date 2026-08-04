@@ -23,6 +23,9 @@ export default function OrderDetailPage() {
   if (!order) return <div className="text-center py-12 text-gray-500">Không tìm thấy đơn hàng</div>
 
   const statusInfo = ORDER_STATUS_LABEL[order.status]
+  const canReturn = (order.status === 'delivered' || order.status === 'completed')
+    && !!order.deliveredAt
+    && (Date.now() - new Date(order.deliveredAt).getTime()) <= 15 * 24 * 60 * 60 * 1000
 
   return (
     <div>
@@ -40,6 +43,9 @@ export default function OrderDetailPage() {
           <div>
             <h2 className="font-bold text-lg">{order.orderCode}</h2>
             <p className="text-sm text-gray-500 mt-0.5">Đặt ngày {formatDate(order.createdAt)}</p>
+            {order.buildId && (
+              <p className="text-xs text-primary-500 mt-1">Đặt từ cấu hình PC: {order.buildName}</p>
+            )}
           </div>
           <span className={`text-sm font-semibold px-3 py-1.5 rounded-full border ${statusInfo?.color}`}>
             {statusInfo?.label}
@@ -121,6 +127,17 @@ export default function OrderDetailPage() {
             {cancel.isPending ? 'Đang hủy...' : 'Hủy đơn hàng'}
           </button>
           <p className="text-xs text-gray-400 mt-2">Chỉ có thể hủy đơn khi đang ở trạng thái "Chờ xác nhận"</p>
+        </div>
+      )}
+
+      {canReturn && (
+        <div className="card p-5">
+          <h3 className="font-semibold mb-3">Thao tác</h3>
+          <Link to={`/account/orders/${order.id}/return`}
+            className="inline-block text-primary-500 border border-primary-300 px-4 py-2 rounded-lg text-sm hover:bg-primary-50 transition-colors">
+            Yêu cầu đổi/trả hàng
+          </Link>
+          <p className="text-xs text-gray-400 mt-2">Áp dụng trong vòng 15 ngày kể từ khi nhận hàng</p>
         </div>
       )}
     </div>

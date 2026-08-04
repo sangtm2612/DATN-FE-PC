@@ -27,13 +27,19 @@ export const productService = {
   getBySlug: (slug: string) =>
     api.get<ApiResponse<Product>>(`/products/${slug}`),
 
-  search: (keyword: string, page = 0, size = 24) =>
+  search: (keyword: string, page = 0, size = 24, track = false) =>
     api.get<ApiResponse<Product[]>>(
-      `/products/search?keyword=${encodeURIComponent(keyword)}&page=${page}&size=${size}`
+      `/products/search?keyword=${encodeURIComponent(keyword)}&page=${page}&size=${size}&track=${track}`
     ),
 
   getRelated: (id: number, limit = 8) =>
     api.get<ApiResponse<Product[]>>(`/products/${id}/related?limit=${limit}`),
+
+  getRecentlyViewed: () =>
+    api.get<ApiResponse<Product[]>>('/products/recently-viewed'),
+
+  getSearchSuggestions: () =>
+    api.get<ApiResponse<string[]>>('/search/suggestions'),
 
   getCuratedRelated: (id: number) =>
     api.get<ApiResponse<Product[]>>(`/products/${id}/related?limit=8&curatedOnly=true`),

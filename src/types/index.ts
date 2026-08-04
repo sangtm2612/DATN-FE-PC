@@ -112,6 +112,7 @@ export interface Cart {
   items: CartItem[]
   totalItems: number
   totalAmount: number
+  autoDiscount?: number
 }
 
 // ─── Order ──────────────────────────────────────────────────
@@ -154,6 +155,8 @@ export interface Order {
   voucherCode?: string
   note?: string
   cancelledReason?: string
+  buildId?: number
+  buildName?: string
   createdAt: string
   confirmedAt?: string
   shippedAt?: string
@@ -161,6 +164,59 @@ export interface Order {
   completedAt?: string
   cancelledAt?: string
   items: OrderItem[]
+}
+
+// ─── Return Request (doi/tra hang) ────────────────────────────
+export type ReturnRequestStatus = 'pending' | 'reviewing' | 'approved' | 'rejected' | 'completed'
+export type ReturnReasonType = 'defective' | 'wrong_item' | 'damaged_delivery' | 'not_satisfied'
+
+export interface ReturnRequestItem {
+  orderItemId: number
+  productName: string
+  quantity: number
+}
+
+export interface ReturnRequest {
+  id: number
+  returnCode: string
+  orderId: number
+  orderCode: string
+  status: ReturnRequestStatus
+  reasonType: ReturnReasonType
+  reasonDetail?: string
+  resolution?: 'exchange' | 'refund'
+  refundAmount?: number
+  staffNote?: string
+  reviewedByName?: string
+  reviewedAt?: string
+  completedAt?: string
+  createdAt: string
+  mediaUrls: string[]
+  items: ReturnRequestItem[]
+  userId?: number
+  userName?: string
+  userPhone?: string
+}
+
+// ─── Build PC ───────────────────────────────────────────────
+export interface PcBuildItem {
+  id: number
+  componentTypeId: number
+  componentTypeName: string
+  productId: number
+  productName: string
+  productThumbnail?: string
+  quantity: number
+  unitPrice: number
+}
+
+export interface PcBuild {
+  id: number
+  name: string
+  description?: string
+  totalPrice: number
+  createdAt: string
+  items: PcBuildItem[]
 }
 
 // ─── Review ─────────────────────────────────────────────────
@@ -185,6 +241,45 @@ export interface Warranty {
   warrantyMonths: number
   status: 'active' | 'expired' | 'voided' | 'in_service'
   product: { id: number; name: string; thumbnail?: string }
+}
+
+// ─── Service Request (yeu cau sua chua) ───────────────────────
+export type ServiceRequestStatus = 'received' | 'diagnosing' | 'repairing' | 'waiting_part' | 'done' | 'returned'
+
+export interface ServiceRequest {
+  id: number
+  serviceCode: string
+  warrantyId?: number
+  productName: string
+  serialNumber?: string
+  issueDesc: string
+  status: ServiceRequestStatus
+  diagnosis?: string
+  repairCost: number
+  customerApprovedRepair?: boolean
+  approvedAt?: string
+  receivedAt: string
+  completedAt?: string
+  returnedAt?: string
+  technicianId?: number
+  technicianName?: string
+  createdAt: string
+  mediaUrls: string[]
+  userId?: number
+  userName?: string
+  userPhone?: string
+  storeId?: number
+}
+
+// ─── Shipping ───────────────────────────────────────────────
+export interface ShippingMethod {
+  id: number
+  name: string
+  description?: string
+  baseFee: number
+  freeThreshold?: number
+  estimatedDays?: string
+  isActive: boolean
 }
 
 // ─── Store ──────────────────────────────────────────────────
@@ -229,6 +324,7 @@ export interface BlogPost {
   publishedAt?: string
   blogCategory?: { id: number; name: string; slug: string }
   author?: { id: number; fullName: string }
+  mentionedProducts?: Product[]
 }
 
 // ─── Voucher ────────────────────────────────────────────────

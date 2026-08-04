@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import api from '@/lib/axios'
 import { formatPrice } from '@/lib/utils'
 import { cartService } from '@/services/cartService'
+import { buildPcService } from '@/services/buildPcService'
 import { useCartStore } from '@/store/cartStore'
+import { useAuthStore } from '@/store/authStore'
 import type { Product } from '@/types'
 import toast from 'react-hot-toast'
-import { Plus, X, ShoppingCart, Save, Printer, AlertTriangle, Cpu } from 'lucide-react'
+import { Plus, X, ShoppingCart, Save, Printer, AlertTriangle, CheckCircle2, Cpu } from 'lucide-react'
 
 interface ComponentType {
   id: number
@@ -34,10 +37,43 @@ export default function BuildPCPage() {
   const [selectingType, setSelectingType] = useState<ComponentType | null>(null)
   const [buildName, setBuildName] = useState('Cấu hình PC của tôi')
   const { setCart } = useCartStore()
+  const { isAuthenticated } = useAuthStore()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const loadBuildId = searchParams.get('buildId')
 
   const { data: componentTypes } = useQuery({
     queryKey: ['pc-component-types'],
     queryFn: () => api.get<{ data: ComponentType[] }>('/build-pc/component-types').then(r => r.data.data || []),
+  })
+
+  // Nạp lại cấu hình đã lưu khi có ?buildId=
+  const { data: loadedBuild } = useQuery({
+    queryKey: ['pc-build-detail', loadBuildId],
+    queryFn: () => buildPcService.getBuildDetail(Number(loadBuildId)).then(r => r.data.data),
+    enabled: !!loadBuildId,
+  })
+
+  useEffect(() => {
+    if (!loadedBuild) return
+    setBuildName(loadedBuild.name)
+    setSelectedComponents(loadedBuild.items.map(item => ({
+      typeId: item.componentTypeId,
+      typeName: item.componentTypeName,
+      product: {
+        id: item.productId,
+        name: item.productName,
+        thumbnail: item.productThumbnail,
+        price: item.unitPrice,
+      } as Product,
+    })))
+  }, [loadedBuild])
+
+  const productIds = selectedComponents.map(c => c.product.id).sort((a, b) => a - b)
+  const { data: compatibility } = useQuery({
+    queryKey: ['pc-compatibility', productIds.join(',')],
+    queryFn: () => buildPcService.checkCompatibility(productIds).then(r => r.data.data),
+    enabled: productIds.length > 0,
   })
 
   const { data: productsForType } = useQuery({
@@ -79,6 +115,27 @@ export default function BuildPCPage() {
       toast.success('Đã thêm tất cả vào giỏ hàng')
     },
   })
+
+  const saveBuild = useMutation({
+    mutationFn: () => buildPcService.saveBuild({
+      name: buildName,
+      items: selectedComponents.map(c => ({ componentTypeId: c.typeId, productId: c.product.id, quantity: 1 })),
+    }),
+    onSuccess: () => {
+      toast.success('Đã lưu cấu hình')
+      navigate('/account/builds')
+    },
+    onError: () => toast.error('Lưu cấu hình thất bại, vui lòng thử lại'),
+  })
+
+  const handleSaveBuild = () => {
+    if (!isAuthenticated) {
+      toast.error('Vui lòng đăng nhập để lưu cấu hình')
+      navigate('/login')
+      return
+    }
+    saveBuild.mutate()
+  }
 
   const requiredTypes = componentTypes?.filter(t => t.isRequired) || []
   const missingRequired = requiredTypes.filter(t => !selectedComponents.find(c => c.typeId === t.id))
@@ -204,6 +261,23 @@ export default function BuildPCPage() {
               </div>
             )}
 
+            {/* Compatibility check (BE) */}
+            {compatibility && compatibility.issues.length > 0 && (
+              <div className={`border rounded-lg p-3 mb-4 flex items-start gap-2
+                ${compatibility.isCompatible ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
+                <AlertTriangle size={14} className={`flex-shrink-0 mt-0.5 ${compatibility.isCompatible ? 'text-amber-500' : 'text-red-500'}`} />
+                <ul className={`text-xs space-y-1 ${compatibility.isCompatible ? 'text-amber-700' : 'text-red-600'}`}>
+                  {compatibility.issues.map((issue, i) => <li key={i}>{issue}</li>)}
+                </ul>
+              </div>
+            )}
+            {compatibility && compatibility.issues.length === 0 && selectedComponents.length > 1 && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4 flex items-center gap-2">
+                <CheckCircle2 size={14} className="text-green-500 flex-shrink-0" />
+                <p className="text-xs text-green-600">Các linh kiện tương thích với nhau</p>
+              </div>
+            )}
+
             {/* Total */}
             <div className="border-t pt-3 mb-4">
               <div className="flex justify-between items-center">
@@ -219,14 +293,20 @@ export default function BuildPCPage() {
             <div className="space-y-2">
               <button
                 onClick={() => addAllToCart.mutate()}
-                disabled={selectedComponents.length === 0 || addAllToCart.isPending}
+                disabled={selectedComponents.length === 0 || addAllToCart.isPending || compatibility?.isCompatible === false}
+                title={compatibility?.isCompatible === false ? 'Linh kiện chưa tương thích, vui lòng kiểm tra lại' : undefined}
                 className="btn-primary w-full py-2.5 flex items-center justify-center gap-2"
               >
                 <ShoppingCart size={16} />
                 {addAllToCart.isPending ? 'Đang thêm...' : 'Thêm tất cả vào giỏ'}
               </button>
-              <button className="btn-outline w-full py-2.5 flex items-center justify-center gap-2">
-                <Save size={16} /> Lưu cấu hình
+              <button
+                onClick={handleSaveBuild}
+                disabled={selectedComponents.length === 0 || saveBuild.isPending || compatibility?.isCompatible === false}
+                title={compatibility?.isCompatible === false ? 'Linh kiện chưa tương thích, vui lòng kiểm tra lại' : undefined}
+                className="btn-outline w-full py-2.5 flex items-center justify-center gap-2"
+              >
+                <Save size={16} /> {saveBuild.isPending ? 'Đang lưu...' : 'Lưu cấu hình'}
               </button>
               <button onClick={() => window.print()}
                 className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 flex items-center justify-center gap-2">

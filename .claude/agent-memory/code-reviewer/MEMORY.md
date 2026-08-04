@@ -1,0 +1,2 @@
+- [DATN FK delete risk](project_datn_fk_delete_risk.md) — nullable FKs w/o ON DELETE clause cause unhandled 500s on delete of referenced rows (confirmed: PcBuild delete after order placed)
+- [DATN passwordHash leak](project_datn_passwordhash_leak.md) — User.passwordHash has no @JsonIgnore; any raw-entity endpoint incl. public GET /blog list leaks bcrypt hash

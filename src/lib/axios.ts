@@ -1,6 +1,7 @@
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/authStore'
+import { getOrCreateSessionId } from '@/lib/utils'
 
 const api = axios.create({
   baseURL: '/api',
@@ -13,9 +14,8 @@ api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken
   if (token) config.headers.Authorization = `Bearer ${token}`
 
-  // Attach session id for guest cart
-  const sessionId = localStorage.getItem('session_id')
-  if (sessionId) config.headers['X-Session-Id'] = sessionId
+  // Attach session id cho guest (cart, san pham da xem, lich su tim kiem)
+  config.headers['X-Session-Id'] = getOrCreateSessionId()
 
   return config
 })

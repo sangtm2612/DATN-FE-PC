@@ -13,6 +13,7 @@ export interface CreateOrderPayload {
   pickupStoreId?: number
   voucherCode?: string
   note?: string
+  buildId?: number
 }
 
 export const orderService = {

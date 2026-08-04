@@ -37,6 +37,8 @@ const OrderHistoryPage  = lazy(() => import('@/pages/account/OrderHistoryPage'))
 const OrderDetailPage   = lazy(() => import('@/pages/account/OrderDetailPage'))
 const WishlistPage      = lazy(() => import('@/pages/account/WishlistPage'))
 const MyWarrantyPage    = lazy(() => import('@/pages/account/MyWarrantyPage'))
+const MyBuildsPage      = lazy(() => import('@/pages/account/MyBuildsPage'))
+const ReturnRequestPage = lazy(() => import('@/pages/account/ReturnRequestPage'))
 
 // Admin
 const AdminDashboard    = lazy(() => import('@/pages/admin/DashboardPage'))
@@ -48,6 +50,10 @@ const AdminBanners      = lazy(() => import('@/pages/admin/BannersPage'))
 const AdminBlog         = lazy(() => import('@/pages/admin/BlogPage'))
 const AdminStores       = lazy(() => import('@/pages/admin/StoresPage'))
 const AdminVouchers     = lazy(() => import('@/pages/admin/VouchersPage'))
+const AdminPromotions   = lazy(() => import('@/pages/admin/PromotionsPage'))
+const AdminStoreStock   = lazy(() => import('@/pages/admin/StoreStockPage'))
+const AdminServiceRequests = lazy(() => import('@/pages/admin/ServiceRequestsPage'))
+const AdminReturnRequests = lazy(() => import('@/pages/admin/ReturnRequestsPage'))
 
 export default function App() {
   return (
@@ -73,6 +79,10 @@ export default function App() {
             <Route path="/admin/blog"            element={<AdminBlog />} />
             <Route path="/admin/stores"          element={<AdminStores />} />
             <Route path="/admin/vouchers"        element={<AdminVouchers />} />
+            <Route path="/admin/promotions"      element={<AdminPromotions />} />
+            <Route path="/admin/store-stock"     element={<AdminStoreStock />} />
+            <Route path="/admin/service-requests" element={<AdminServiceRequests />} />
+            <Route path="/admin/return-requests" element={<AdminReturnRequests />} />
           </Route>
         </Route>
 
@@ -102,8 +112,10 @@ export default function App() {
               <Route path="addresses"           element={<AddressPage />} />
               <Route path="orders"              element={<OrderHistoryPage />} />
               <Route path="orders/:id"          element={<OrderDetailPage />} />
+              <Route path="orders/:id/return"   element={<ReturnRequestPage />} />
               <Route path="wishlist"            element={<WishlistPage />} />
               <Route path="warranties"          element={<MyWarrantyPage />} />
+              <Route path="builds"              element={<MyBuildsPage />} />
             </Route>
           </Route>
 

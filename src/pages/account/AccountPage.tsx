@@ -1,5 +1,5 @@
 import { Outlet, NavLink } from 'react-router-dom'
-import { User, MapPin, ShoppingBag, Heart, Shield } from 'lucide-react'
+import { User, MapPin, ShoppingBag, Heart, Shield, Cpu } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/axios'
@@ -10,6 +10,7 @@ const navItems = [
   { to: '/account/orders',     label: 'Đơn hàng của tôi',   icon: ShoppingBag },
   { to: '/account/wishlist',   label: 'Sản phẩm yêu thích', icon: Heart },
   { to: '/account/warranties', label: 'Bảo hành của tôi',   icon: Shield },
+  { to: '/account/builds',     label: 'Cấu hình PC đã lưu', icon: Cpu },
 ]
 
 export default function AccountPage() {

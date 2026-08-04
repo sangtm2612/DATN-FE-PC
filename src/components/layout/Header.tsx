@@ -36,6 +36,12 @@ export default function Header() {
     enabled: searchQuery.length >= 2,
   })
 
+  const { data: historySuggestions } = useQuery({
+    queryKey: ['search-history-suggest'],
+    queryFn: () => productService.getSearchSuggestions().then(r => r.data.data || []),
+    enabled: searchOpen && searchQuery.length < 2,
+  })
+
   // Notification unread count
   const { data: unreadData } = useQuery({
     queryKey: ['notif-unread'],
@@ -143,6 +149,23 @@ export default function Header() {
               <Search size={16} />
             </button>
           </form>
+
+          {/* Goi y tu lich su tim kiem (khi chua go du 2 ky tu) */}
+          {searchOpen && searchQuery.length < 2 && historySuggestions && historySuggestions.length > 0 && (
+            <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg mt-1 z-50 overflow-hidden">
+              <p className="px-4 pt-2.5 pb-1 text-xs font-medium text-gray-400">Tìm kiếm gần đây</p>
+              {historySuggestions.map(kw => (
+                <button
+                  key={kw}
+                  type="button"
+                  onClick={() => { setSearchQuery(kw); navigate(`/tim-kiem?q=${encodeURIComponent(kw)}`); setSearchOpen(false) }}
+                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 text-left"
+                >
+                  <Search size={13} className="text-gray-300 flex-shrink-0" /> {kw}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Autocomplete */}
           {searchOpen && suggestions && suggestions.length > 0 && (
