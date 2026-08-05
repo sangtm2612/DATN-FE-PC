@@ -15,6 +15,7 @@ const BuildPCPage     = lazy(() => import('@/pages/BuildPCPage'))
 const CartPage        = lazy(() => import('@/pages/CartPage'))
 const CheckoutPage    = lazy(() => import('@/pages/CheckoutPage'))
 const OrderSuccess    = lazy(() => import('@/pages/OrderSuccessPage'))
+const PaymentResultPage = lazy(() => import('@/pages/PaymentResultPage'))
 const TrackOrderPage  = lazy(() => import('@/pages/TrackOrderPage'))
 const WarrantyPage    = lazy(() => import('@/pages/WarrantyPage'))
 const StorePage       = lazy(() => import('@/pages/StorePage'))
@@ -97,6 +98,7 @@ export default function App() {
           <Route path="/gio-hang"              element={<CartPage />} />
           <Route path="/tim-kiem"              element={<SearchPage />} />
           <Route path="/tra-don-hang"          element={<TrackOrderPage />} />
+          <Route path="/payment-result"        element={<PaymentResultPage />} />
           <Route path="/tra-bao-hanh"          element={<WarrantyPage />} />
           <Route path="/cua-hang"              element={<StorePage />} />
           <Route path="/tin-tuc"               element={<BlogPage />} />

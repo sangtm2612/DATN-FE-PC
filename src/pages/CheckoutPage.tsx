@@ -7,6 +7,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { useCartStore } from '@/store/cartStore'
 import { useAuthStore } from '@/store/authStore'
 import { orderService, type CreateOrderPayload } from '@/services/orderService'
+import { createVNPayPayment } from '@/services/paymentService'
 import { formatPrice } from '@/lib/utils'
 import { PAYMENT_METHOD_LABEL } from '@/lib/utils'
 import api from '@/lib/axios'
@@ -98,11 +99,38 @@ export default function CheckoutPage() {
 
   const createOrder = useMutation({
     mutationFn: (data: CreateOrderPayload) => orderService.create(data),
-    onSuccess: (res) => {
+    onSuccess: async (res) => {
       const order = res.data.data
-      toast.success('Đặt hàng thành công!')
-      navigate(`/order-success/${order?.orderCode}`)
+      
+      // Kiểm tra payment method
+      if (paymentMethod === 'vnpay') {
+        try {
+          // Gọi API tạo VNPay payment URL
+          const paymentUrl = await createVNPayPayment(order.id)
+          toast.success('Đang chuyển đến trang thanh toán VNPay...')
+          
+          // Redirect to VNPay
+          window.location.href = paymentUrl
+        } catch (error: any) {
+          toast.error(error.message || 'Không thể tạo thanh toán VNPay')
+          console.error('VNPay payment error:', error)
+          
+          // Fallback - vẫn redirect về order success
+          navigate(`/order-success/${order?.orderCode}`)
+        }
+      } else if (paymentMethod === 'momo' || paymentMethod === 'zalopay') {
+        // TODO: Tích hợp MoMo/ZaloPay sau
+        toast.info('Phương thức thanh toán đang được phát triển')
+        navigate(`/order-success/${order?.orderCode}`)
+      } else {
+        // COD hoặc bank_transfer
+        toast.success('Đặt hàng thành công!')
+        navigate(`/order-success/${order?.orderCode}`)
+      }
     },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Đặt hàng thất bại')
+    }
   })
 
   const voucherDiscount = !voucherApplied || isFreeShippingVoucher
