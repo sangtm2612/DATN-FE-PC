@@ -35,6 +35,20 @@ const emptyForm: ProductForm = {
   isActive: true, isFeatured: false,
 }
 
+// Flatten category tree thành danh sách tuyến tính có depth để render <select> dạng cây.
+// Ví dụ: "Linh kiện" (depth 0) → "└─ CPU" (depth 1) → "└─ Sub-CPU" (depth 2).
+function flattenCategoryTree(
+  nodes: Category[],
+  depth = 0,
+  out: { id: number; name: string; depth: number }[] = [],
+): { id: number; name: string; depth: number }[] {
+  for (const n of nodes) {
+    out.push({ id: n.id, name: n.name, depth })
+    if (n.children?.length) flattenCategoryTree(n.children, depth + 1, out)
+  }
+  return out
+}
+
 function toForm(p: Product): ProductForm {
   return {
     name: p.name,
@@ -75,8 +89,8 @@ export default function AdminProductsPage() {
   })
 
   const { data: categories } = useQuery({
-    queryKey: ['admin-categories-select'],
-    queryFn: () => api.get<{ data: Category[] }>('/categories').then(r => r.data.data || []),
+    queryKey: ['admin-categories-tree'],
+    queryFn: () => api.get<{ data: Category[] }>('/categories/tree').then(r => r.data.data || []),
   })
 
   const { data: brands } = useQuery({
@@ -379,8 +393,10 @@ export default function AdminProductsPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Danh mục</label>
                   <select value={form.categoryId} onChange={e => set('categoryId', e.target.value)} className="input">
                     <option value="">-- Chọn danh mục --</option>
-                    {categories?.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
+                    {flattenCategoryTree(categories || []).map(c => (
+                      <option key={c.id} value={c.id}>
+                        {'\u00A0\u00A0'.repeat(c.depth) + (c.depth > 0 ? '└─ ' : '') + c.name}
+                      </option>
                     ))}
                   </select>
                 </div>

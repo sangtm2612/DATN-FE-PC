@@ -26,6 +26,7 @@ export interface Category {
   description?: string
   sortOrder: number
   isActive: boolean
+  parentId?: number | null
   children?: Category[]
 }
 

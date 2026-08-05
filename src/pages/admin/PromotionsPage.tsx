@@ -31,6 +31,18 @@ const PROMOTION_TYPE_LABEL: Record<string, string> = {
   brand_deal: 'Theo thương hiệu', student: 'Sinh viên', give_away: 'Quà tặng',
 }
 
+function flattenCategoryTree(
+  nodes: Category[],
+  depth = 0,
+  out: { id: number; name: string; depth: number }[] = [],
+): { id: number; name: string; depth: number }[] {
+  for (const n of nodes) {
+    out.push({ id: n.id, name: n.name, depth })
+    if (n.children?.length) flattenCategoryTree(n.children, depth + 1, out)
+  }
+  return out
+}
+
 const emptyForm = {
   promotionType: 'general', name: '', description: '',
   discountType: 'percent', discountValue: 0, minOrderValue: 0, maxDiscount: '',
@@ -51,8 +63,8 @@ export default function AdminPromotionsPage() {
   })
 
   const { data: categories } = useQuery({
-    queryKey: ['all-categories'],
-    queryFn: () => api.get<{ data: Category[] }>('/categories').then(r => r.data.data || []),
+    queryKey: ['all-categories-tree'],
+    queryFn: () => api.get<{ data: Category[] }>('/categories/tree').then(r => r.data.data || []),
   })
 
   const { data: brands } = useQuery({
@@ -226,11 +238,11 @@ export default function AdminPromotionsPage() {
                 {!!categories?.length && (
                   <div className="mb-3">
                     <p className="text-xs text-gray-500 mb-1">Danh mục</p>
-                    <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
-                      {categories.map(c => (
+                    <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                      {flattenCategoryTree(categories).map(c => (
                         <button type="button" key={c.id} onClick={() => toggleScope('categoryIds', c.id)}
                           className={`text-xs px-2.5 py-1 rounded-full border ${form.categoryIds.includes(c.id) ? 'bg-primary-500 text-white border-primary-500' : 'border-gray-200 text-gray-600'}`}>
-                          {c.name}
+                          {'\u00A0\u00A0'.repeat(c.depth) + (c.depth > 0 ? '└─ ' : '') + c.name}
                         </button>
                       ))}
                     </div>
