@@ -45,7 +45,9 @@ export default function AdminBlogPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Quản lý Blog</h1>
-        <button className="btn-primary flex items-center gap-2"><Plus size={16} /> Viết bài mới</button>
+        <Link to="/admin/blog/new" className="btn-primary flex items-center gap-2">
+          <Plus size={16} /> Viết bài mới
+        </Link>
       </div>
 
       <div className="card overflow-hidden">
@@ -83,7 +85,8 @@ export default function AdminBlogPage() {
                   <div className="flex gap-1">
                     <Link to={`/tin-tuc/${post.slug}`} target="_blank"
                       className="p-1.5 hover:bg-gray-200 rounded text-gray-500 hover:text-blue-500"><Eye size={15} /></Link>
-                    <button className="p-1.5 hover:bg-gray-200 rounded text-gray-500 hover:text-primary-500"><Edit size={15} /></button>
+                    <Link to={`/admin/blog/edit/${post.id}`}
+                      className="p-1.5 hover:bg-gray-200 rounded text-gray-500 hover:text-primary-500"><Edit size={15} /></Link>
                     <button onClick={() => openProductsModal(post)}
                       title="Sản phẩm liên quan"
                       className="p-1.5 hover:bg-gray-200 rounded text-gray-500 hover:text-primary-500"><Link2 size={15} /></button>

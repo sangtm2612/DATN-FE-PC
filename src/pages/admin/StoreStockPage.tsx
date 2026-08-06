@@ -6,9 +6,14 @@ import { Package, Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface StockRow {
-  product: { id: number; name: string; sku?: string; thumbnail?: string }
-  store: { id: number }
+  productId: number
+  productName: string
+  productSlug: string
+  thumbnailUrl?: string
+  storeId: number
+  storeName: string
   stockQty: number
+  updatedAt: string
 }
 
 export default function AdminStoreStockPage() {
@@ -89,8 +94,8 @@ export default function AdminStoreStockPage() {
                 <Package size={32} className="mx-auto mb-2 opacity-30" /> Chưa có sản phẩm nào trong showroom này
               </td></tr>
             ) : stock.map(row => (
-              <StockRowItem key={row.product.id} row={row}
-                onSave={qty => updateStock.mutate({ productId: row.product.id, quantity: qty })}
+              <StockRowItem key={row.productId} row={row}
+                onSave={qty => updateStock.mutate({ productId: row.productId, quantity: qty })}
                 saving={updateStock.isPending} />
             ))}
           </tbody>
@@ -104,8 +109,8 @@ function StockRowItem({ row, onSave, saving }: { row: StockRow; onSave: (qty: nu
   const [qty, setQty] = useState(row.stockQty)
   return (
     <tr className="hover:bg-gray-50">
-      <td className="px-4 py-3 font-medium">{row.product.name}</td>
-      <td className="px-4 py-3 text-gray-500 font-mono text-xs">{row.product.sku}</td>
+      <td className="px-4 py-3 font-medium">{row.productName}</td>
+      <td className="px-4 py-3 text-gray-500 font-mono text-xs">{row.productSlug}</td>
       <td className="px-4 py-3">
         <input type="number" value={qty} onChange={e => setQty(Math.max(0, +e.target.value))}
           className="input w-24 py-1" />

@@ -17,6 +17,12 @@ api.interceptors.request.use((config) => {
   // Attach session id cho guest (cart, san pham da xem, lich su tim kiem)
   config.headers['X-Session-Id'] = getOrCreateSessionId()
 
+  // Let axios auto-detect Content-Type for FormData
+  // Don't override if it's already set or if data is FormData
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type']
+  }
+
   return config
 })
 

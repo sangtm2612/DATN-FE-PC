@@ -7,7 +7,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { useCartStore } from '@/store/cartStore'
 import { useAuthStore } from '@/store/authStore'
 import { orderService, type CreateOrderPayload } from '@/services/orderService'
-import { createVNPayPayment } from '@/services/paymentService'
+import { createVNPayPayment, createMoMoPayment, createZaloPayPayment } from '@/services/paymentService'
 import { formatPrice } from '@/lib/utils'
 import { PAYMENT_METHOD_LABEL } from '@/lib/utils'
 import api from '@/lib/axios'
@@ -118,10 +118,36 @@ export default function CheckoutPage() {
           // Fallback - vẫn redirect về order success
           navigate(`/order-success/${order?.orderCode}`)
         }
-      } else if (paymentMethod === 'momo' || paymentMethod === 'zalopay') {
-        // TODO: Tích hợp MoMo/ZaloPay sau
-        toast.info('Phương thức thanh toán đang được phát triển')
-        navigate(`/order-success/${order?.orderCode}`)
+      } else if (paymentMethod === 'momo') {
+        try {
+          // Gọi API tạo MoMo payment URL
+          const paymentUrl = await createMoMoPayment(order.id)
+          toast.success('Đang chuyển đến ví MoMo...')
+          
+          // Redirect to MoMo
+          window.location.href = paymentUrl
+        } catch (error: any) {
+          toast.error(error.message || 'Không thể tạo thanh toán MoMo')
+          console.error('MoMo payment error:', error)
+          
+          // Fallback
+          navigate(`/order-success/${order?.orderCode}`)
+        }
+      } else if (paymentMethod === 'zalopay') {
+        try {
+          // Gọi API tạo ZaloPay payment URL
+          const paymentUrl = await createZaloPayPayment(order.id)
+          toast.success('Đang chuyển đến ví ZaloPay...')
+          
+          // Redirect to ZaloPay
+          window.location.href = paymentUrl
+        } catch (error: any) {
+          toast.error(error.message || 'Không thể tạo thanh toán ZaloPay')
+          console.error('ZaloPay payment error:', error)
+          
+          // Fallback
+          navigate(`/order-success/${order?.orderCode}`)
+        }
       } else {
         // COD hoặc bank_transfer
         toast.success('Đặt hàng thành công!')

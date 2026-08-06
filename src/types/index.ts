@@ -323,6 +323,8 @@ export interface BlogPost {
   viewCount: number
   isPublished?: boolean
   publishedAt?: string
+  metaTitle?: string
+  metaDesc?: string
   blogCategory?: { id: number; name: string; slug: string }
   author?: { id: number; fullName: string }
   mentionedProducts?: Product[]

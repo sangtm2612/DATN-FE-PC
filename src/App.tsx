@@ -24,6 +24,9 @@ const BlogDetailPage  = lazy(() => import('@/pages/BlogDetailPage'))
 const SearchPage      = lazy(() => import('@/pages/SearchPage'))
 const NotFoundPage    = lazy(() => import('@/pages/NotFoundPage'))
 
+// Dev tools
+const DevMockPaymentPage = lazy(() => import('@/pages/DevMockPaymentPage'))
+
 // Auth
 const LoginPage    = lazy(() => import('@/pages/auth/LoginPage'))
 const RegisterPage = lazy(() => import('@/pages/auth/RegisterPage'))
@@ -49,6 +52,7 @@ const AdminCategories   = lazy(() => import('@/pages/admin/CategoriesPage'))
 const AdminBrands       = lazy(() => import('@/pages/admin/BrandsPage'))
 const AdminBanners      = lazy(() => import('@/pages/admin/BannersPage'))
 const AdminBlog         = lazy(() => import('@/pages/admin/BlogPage'))
+const AdminBlogEditor   = lazy(() => import('@/pages/admin/BlogEditorPage'))
 const AdminStores       = lazy(() => import('@/pages/admin/StoresPage'))
 const AdminVouchers     = lazy(() => import('@/pages/admin/VouchersPage'))
 const AdminPromotions   = lazy(() => import('@/pages/admin/PromotionsPage'))
@@ -78,6 +82,8 @@ export default function App() {
             <Route path="/admin/brands"          element={<AdminBrands />} />
             <Route path="/admin/banners"         element={<AdminBanners />} />
             <Route path="/admin/blog"            element={<AdminBlog />} />
+            <Route path="/admin/blog/new"        element={<AdminBlogEditor />} />
+            <Route path="/admin/blog/edit/:id"   element={<AdminBlogEditor />} />
             <Route path="/admin/stores"          element={<AdminStores />} />
             <Route path="/admin/vouchers"        element={<AdminVouchers />} />
             <Route path="/admin/promotions"      element={<AdminPromotions />} />
@@ -103,6 +109,9 @@ export default function App() {
           <Route path="/cua-hang"              element={<StorePage />} />
           <Route path="/tin-tuc"               element={<BlogPage />} />
           <Route path="/tin-tuc/:slug"         element={<BlogDetailPage />} />
+          
+          {/* Dev tools */}
+          <Route path="/dev-mock-payment"      element={<DevMockPaymentPage />} />
 
           {/* Protected */}
           <Route element={<ProtectedRoute />}>

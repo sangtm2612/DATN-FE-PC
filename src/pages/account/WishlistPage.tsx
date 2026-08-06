@@ -7,13 +7,25 @@ import { cartService } from '@/services/cartService'
 import { useCartStore } from '@/store/cartStore'
 import toast from 'react-hot-toast'
 
+interface WishlistItem {
+  productId: number
+  productName: string
+  slug: string
+  price: number
+  discountedPrice?: number
+  thumbnailUrl: string
+  inStock: boolean
+  stockQuantity: number
+  addedAt: string
+}
+
 export default function WishlistPage() {
   const qc = useQueryClient()
   const { setCart } = useCartStore()
 
   const { data: wishlists, isLoading } = useQuery({
     queryKey: ['wishlist'],
-    queryFn: () => api.get<{ data: any[] }>('/wishlist').then(r => r.data.data || []),
+    queryFn: () => api.get<{ data: WishlistItem[] }>('/wishlist').then(r => r.data.data || []),
   })
 
   const remove = useMutation({
@@ -43,30 +55,63 @@ export default function WishlistPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {wishlists.map((item: any) => {
-            const p = item.product
-            return (
-              <div key={item.id} className="card group">
-                <div className="relative aspect-square bg-gray-50">
-                  <Link to={`/san-pham/${p.slug}`}>
-                    <img src={p.thumbnail} alt={p.name} className="w-full h-full object-contain p-3" />
-                  </Link>
-                  <button onClick={() => remove.mutate(p.id)}
-                    className="absolute top-2 right-2 p-1.5 bg-white rounded-full shadow text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-                <div className="p-3">
-                  <Link to={`/san-pham/${p.slug}`} className="text-sm font-medium text-gray-800 hover:text-primary-500 line-clamp-2">{p.name}</Link>
-                  <p className="price text-sm mt-1">{formatPrice(p.price)}</p>
-                  <button onClick={() => addToCart.mutate(p.id)}
-                    className="mt-2 w-full btn-outline text-xs py-1.5 flex items-center justify-center gap-1">
-                    <ShoppingCart size={13} /> Thêm vào giỏ
-                  </button>
-                </div>
+          {wishlists.map((item: WishlistItem) => (
+            <div key={item.productId} className="card group">
+              <div className="relative aspect-square bg-gray-50">
+                <Link to={`/san-pham/${item.slug}`}>
+                  <img 
+                    src={item.thumbnailUrl || '/placeholder.png'} 
+                    alt={item.productName} 
+                    className="w-full h-full object-contain p-3" 
+                  />
+                </Link>
+                <button 
+                  onClick={() => remove.mutate(item.productId)}
+                  className="absolute top-2 right-2 p-1.5 bg-white rounded-full shadow text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                >
+                  <Trash2 size={14} />
+                </button>
+                
+                {/* Stock status badge */}
+                {!item.inStock && (
+                  <span className="absolute top-2 left-2 bg-gray-500 text-white text-xs font-bold px-2 py-0.5 rounded">
+                    HẾT HÀNG
+                  </span>
+                )}
               </div>
-            )
-          })}
+              
+              <div className="p-3">
+                <Link 
+                  to={`/san-pham/${item.slug}`} 
+                  className="text-sm font-medium text-gray-800 hover:text-primary-500 line-clamp-2"
+                >
+                  {item.productName}
+                </Link>
+                
+                {/* Price */}
+                <div className="flex items-baseline gap-2 mt-1 flex-wrap">
+                  <span className="price text-sm">
+                    {formatPrice(item.discountedPrice || item.price)}
+                  </span>
+                  {item.discountedPrice && (
+                    <span className="text-xs text-gray-400 line-through">
+                      {formatPrice(item.price)}
+                    </span>
+                  )}
+                </div>
+                
+                {/* Add to cart button */}
+                <button 
+                  onClick={() => addToCart.mutate(item.productId)}
+                  disabled={!item.inStock || addToCart.isPending}
+                  className="mt-2 w-full btn-outline text-xs py-1.5 flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ShoppingCart size={13} />
+                  {!item.inStock ? 'Hết hàng' : addToCart.isPending ? 'Đang thêm...' : 'Thêm vào giỏ'}
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
