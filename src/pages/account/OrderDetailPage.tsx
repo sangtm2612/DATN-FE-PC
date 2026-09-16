@@ -60,7 +60,7 @@ export default function OrderDetailPage() {
           <p className="font-medium">{order.shippingName}</p>
           <p className="text-sm text-gray-500">{order.shippingPhone}</p>
           <p className="text-sm text-gray-500 mt-1">
-            {order.shippingAddress}, {order.shippingWard}, {order.shippingDistrict}, {order.shippingProvince}
+            {order.shippingAddress}, {order.shippingWard}, {order.shippingProvince}
           </p>
         </div>
 

@@ -106,7 +106,7 @@ export default function TrackOrderPage() {
               <h3 className="font-semibold mb-3">Địa chỉ giao hàng</h3>
               <p className="text-sm font-medium">{order.shippingName}</p>
               <p className="text-sm text-gray-500">{order.shippingPhone}</p>
-              <p className="text-sm text-gray-500">{order.shippingAddress}, {order.shippingWard}, {order.shippingDistrict}, {order.shippingProvince}</p>
+              <p className="text-sm text-gray-500">{order.shippingAddress}, {order.shippingWard}, {order.shippingProvince}</p>
             </div>
             <div className="card p-5">
               <h3 className="font-semibold mb-3">Thanh toán</h3>
