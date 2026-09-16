@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { Suspense, lazy, useEffect } from 'react'
 import { useCartStore } from '@/store/cartStore'
 import { useAuthStore } from '@/store/authStore'
@@ -9,6 +9,17 @@ import AuthLayout from '@/layouts/AuthLayout'
 import ProtectedRoute from '@/components/common/ProtectedRoute'
 import AdminRoute from '@/components/common/AdminRoute'
 import PageLoader from '@/components/common/PageLoader'
+
+type AdminRole = 'admin' | 'staff' | 'technician'
+
+function RoleRoute({ roles }: { roles: AdminRole[] }) {
+  const { user } = useAuthStore()
+  if (!user || !roles.includes(user.role as AdminRole)) {
+    const fallback = user?.role === 'technician' ? '/admin/service-requests' : '/admin'
+    return <Navigate to={fallback} replace />
+  }
+  return <Outlet />
+}
 
 // Lazy load pages
 const HomePage        = lazy(() => import('@/pages/HomePage'))
@@ -60,6 +71,7 @@ const AdminBlogEditor   = lazy(() => import('@/pages/admin/BlogEditorPage'))
 const AdminStores       = lazy(() => import('@/pages/admin/StoresPage'))
 const AdminVouchers     = lazy(() => import('@/pages/admin/VouchersPage'))
 const AdminVoucherPolicies = lazy(() => import('@/pages/admin/VoucherPoliciesPage'))
+const AdminUsers           = lazy(() => import('@/pages/admin/UsersPage'))
 const AdminPromotions   = lazy(() => import('@/pages/admin/PromotionsPage'))
 const AdminStoreStock   = lazy(() => import('@/pages/admin/StoreStockPage'))
 const AdminServiceRequests = lazy(() => import('@/pages/admin/ServiceRequestsPage'))
@@ -100,22 +112,32 @@ export default function App() {
         {/* Admin */}
         <Route element={<AdminRoute />}>
           <Route element={<AdminLayout />}>
-            <Route path="/admin"                 element={<AdminDashboard />} />
-            <Route path="/admin/products"        element={<AdminProducts />} />
-            <Route path="/admin/orders"          element={<AdminOrders />} />
-            <Route path="/admin/categories"      element={<AdminCategories />} />
-            <Route path="/admin/brands"          element={<AdminBrands />} />
-            <Route path="/admin/banners"         element={<AdminBanners />} />
-            <Route path="/admin/blog"            element={<AdminBlog />} />
-            <Route path="/admin/blog/new"        element={<AdminBlogEditor />} />
-            <Route path="/admin/blog/edit/:id"   element={<AdminBlogEditor />} />
-            <Route path="/admin/stores"          element={<AdminStores />} />
-            <Route path="/admin/vouchers"        element={<AdminVouchers />} />
-            <Route path="/admin/voucher-policies" element={<AdminVoucherPolicies />} />
-            <Route path="/admin/promotions"      element={<AdminPromotions />} />
-            <Route path="/admin/store-stock"     element={<AdminStoreStock />} />
+            {/* Admin + Staff + Technician */}
             <Route path="/admin/service-requests" element={<AdminServiceRequests />} />
-            <Route path="/admin/return-requests" element={<AdminReturnRequests />} />
+
+            {/* Admin + Staff */}
+            <Route element={<RoleRoute roles={['admin', 'staff']} />}>
+              <Route path="/admin"                 element={<AdminDashboard />} />
+              <Route path="/admin/orders"          element={<AdminOrders />} />
+              <Route path="/admin/products"        element={<AdminProducts />} />
+              <Route path="/admin/categories"      element={<AdminCategories />} />
+              <Route path="/admin/brands"          element={<AdminBrands />} />
+              <Route path="/admin/return-requests" element={<AdminReturnRequests />} />
+            </Route>
+
+            {/* Admin only */}
+            <Route element={<RoleRoute roles={['admin']} />}>
+              <Route path="/admin/users"            element={<AdminUsers />} />
+              <Route path="/admin/vouchers"         element={<AdminVouchers />} />
+              <Route path="/admin/voucher-policies" element={<AdminVoucherPolicies />} />
+              <Route path="/admin/promotions"       element={<AdminPromotions />} />
+              <Route path="/admin/banners"          element={<AdminBanners />} />
+              <Route path="/admin/blog"             element={<AdminBlog />} />
+              <Route path="/admin/blog/new"         element={<AdminBlogEditor />} />
+              <Route path="/admin/blog/edit/:id"    element={<AdminBlogEditor />} />
+              <Route path="/admin/stores"           element={<AdminStores />} />
+              <Route path="/admin/store-stock"      element={<AdminStoreStock />} />
+            </Route>
           </Route>
         </Route>
 

@@ -171,6 +171,20 @@ export interface Order {
   completedAt?: string
   cancelledAt?: string
   items: OrderItem[]
+  history?: OrderHistoryEntry[]
+}
+
+export interface OrderHistoryEntry {
+  id: number
+  fromStatus?: string
+  toStatus: string
+  performedById?: number
+  performedByName?: string
+  performedByUsername?: string
+  performedByRole?: string
+  actorType: string
+  note?: string
+  createdAt: string
 }
 
 // Return Request (doi/tra hang)

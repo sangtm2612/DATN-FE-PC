@@ -3,26 +3,30 @@ import { useState } from 'react'
 import {
   LayoutDashboard, Package, ShoppingCart, Tag, Layers,
   Image, FileText, MapPin, Ticket, Percent, Warehouse, Wrench, Undo2, LogOut, Menu, X,
-  ChevronRight, Bell, Shield
+  ChevronRight, Bell, Shield, Users
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import toast from 'react-hot-toast'
 
 const navItems = [
+  // Admin + Staff
   { to: '/admin',            label: 'Dashboard',    icon: LayoutDashboard, exact: true, roles: ['admin', 'staff'] },
-  { to: '/admin/products',   label: 'Sản phẩm',     icon: Package,         roles: ['admin', 'staff'] },
   { to: '/admin/orders',     label: 'Đơn hàng',     icon: ShoppingCart,    roles: ['admin', 'staff'] },
+  { to: '/admin/products',   label: 'Sản phẩm',     icon: Package,         roles: ['admin', 'staff'] },
   { to: '/admin/categories', label: 'Danh mục',     icon: Layers,          roles: ['admin', 'staff'] },
   { to: '/admin/brands',     label: 'Thương hiệu',  icon: Tag,             roles: ['admin', 'staff'] },
-  { to: '/admin/vouchers',   label: 'Voucher',      icon: Ticket,          roles: ['admin', 'staff'] },
-  { to: '/admin/voucher-policies', label: 'Chính sách voucher', icon: Shield, roles: ['admin'] },
-  { to: '/admin/promotions', label: 'Khuyến mãi',   icon: Percent,         roles: ['admin', 'staff'] },
-  { to: '/admin/banners',    label: 'Banner',       icon: Image,           roles: ['admin', 'staff'] },
-  { to: '/admin/blog',       label: 'Blog',         icon: FileText,        roles: ['admin', 'staff'] },
-  { to: '/admin/stores',     label: 'Cửa hàng',     icon: MapPin,          roles: ['admin', 'staff'] },
-  { to: '/admin/store-stock', label: 'Tồn kho showroom', icon: Warehouse,  roles: ['admin', 'staff'] },
+  { to: '/admin/return-requests', label: 'Đổi/trả hàng', icon: Undo2,     roles: ['admin', 'staff'] },
+  // Admin + Staff + Technician
   { to: '/admin/service-requests', label: 'Yêu cầu sửa chữa', icon: Wrench, roles: ['admin', 'staff', 'technician'] },
-  { to: '/admin/return-requests', label: 'Đổi/trả hàng', icon: Undo2, roles: ['admin', 'staff'] },
+  // Admin only
+  { to: '/admin/users',            label: 'Tài khoản',          icon: Users,    roles: ['admin'] },
+  { to: '/admin/vouchers',         label: 'Voucher',             icon: Ticket,   roles: ['admin'] },
+  { to: '/admin/voucher-policies', label: 'Chính sách voucher',  icon: Shield,   roles: ['admin'] },
+  { to: '/admin/promotions',       label: 'Khuyến mãi',          icon: Percent,  roles: ['admin'] },
+  { to: '/admin/banners',          label: 'Banner',               icon: Image,    roles: ['admin'] },
+  // { to: '/admin/blog',           label: 'Blog',         icon: FileText,        roles: ['admin'] },
+  // { to: '/admin/stores',         label: 'Cửa hàng',     icon: MapPin,          roles: ['admin'] },
+  // { to: '/admin/store-stock',    label: 'Tồn kho showroom', icon: Warehouse,    roles: ['admin'] },
 ]
 
 export default function AdminLayout() {
@@ -75,7 +79,14 @@ export default function AdminLayout() {
                 {user?.fullName?.[0] ?? 'A'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{user?.fullName}</p>
+                <p className="text-sm font-medium truncate">
+                  {user?.fullName}
+                  {user?.email && (
+                    <span className="text-gray-400 font-normal">
+                      {' - '}{user.email.includes('@') ? user.email.split('@')[0] : user.email}
+                    </span>
+                  )}
+                </p>
                 <p className="text-xs text-gray-400 capitalize">{user?.role}</p>
               </div>
               <button onClick={handleLogout} className="text-gray-400 hover:text-white">

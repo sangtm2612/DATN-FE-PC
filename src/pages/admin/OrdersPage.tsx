@@ -7,8 +7,10 @@ import Pagination from '@/components/common/Pagination'
 import toast from 'react-hot-toast'
 import {
   Eye, Search, X, Package, MapPin, CreditCard, Clock,
-  Phone, Mail, User, FileText, ChevronRight, Truck
+  Phone, Mail, User, FileText, Truck, CheckCircle, AlertCircle,
+  ArrowRight, ShieldCheck
 } from 'lucide-react'
+import type { OrderHistoryEntry } from '@/types'
 
 const STATUS_OPTS = ['', 'pending', 'confirmed', 'processing', 'shipping', 'delivered', 'completed', 'cancelled']
 
@@ -164,6 +166,11 @@ export default function AdminOrdersPage() {
   )
 }
 
+const ACTOR_LABEL: Record<string, string> = {
+  customer: 'Khách hàng', staff: 'Nhân viên',
+  technician: 'Kỹ thuật viên', admin: 'Admin', system: 'Hệ thống',
+}
+
 function OrderDetailModal({ order, onClose, onUpdateStatus, isUpdating }: {
   order: Order
   onClose: () => void
@@ -173,17 +180,13 @@ function OrderDetailModal({ order, onClose, onUpdateStatus, isUpdating }: {
   const [newStatus, setNewStatus] = useState(order.status)
   const [staffNote, setStaffNote] = useState(order.staffNote || '')
 
-  const timeline = [
-    { label: 'Đặt hàng', time: order.createdAt, icon: Package },
-    { label: 'Xác nhận', time: order.confirmedAt, icon: FileText },
-    { label: 'Đang giao', time: order.shippedAt, icon: Truck },
-    { label: 'Đã giao', time: order.deliveredAt, icon: MapPin },
-    { label: 'Hoàn thành', time: order.completedAt, icon: Package },
-  ].filter(t => t.time)
-
-  if (order.cancelledAt) {
-    timeline.push({ label: 'Đã hủy', time: order.cancelledAt, icon: X })
-  }
+  // Fetch chi tiết đầy đủ kèm history từ endpoint admin/detail
+  const { data: detail } = useQuery({
+    queryKey: ['admin-order-detail', order.id],
+    queryFn: () => api.get<{ data: Order }>(`/orders/admin/${order.id}/detail`).then(r => r.data.data),
+    initialData: order,
+  })
+  const o = detail || order
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 pt-[5vh] overflow-y-auto">
@@ -192,15 +195,13 @@ function OrderDetailModal({ order, onClose, onUpdateStatus, isUpdating }: {
         <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white rounded-t-2xl z-10">
           <div>
             <h3 className="font-bold text-lg">Chi tiết đơn hàng</h3>
-            <p className="text-sm text-gray-500 font-mono">{order.orderCode}</p>
+            <p className="text-sm text-gray-500 font-mono">{o.orderCode}</p>
           </div>
           <div className="flex items-center gap-3">
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${ORDER_STATUS_LABEL[order.status]?.color}`}>
-              {ORDER_STATUS_LABEL[order.status]?.label}
+            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${ORDER_STATUS_LABEL[o.status]?.color}`}>
+              {ORDER_STATUS_LABEL[o.status]?.label}
             </span>
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
-              <X size={18} />
-            </button>
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg"><X size={18} /></button>
           </div>
         </div>
 
@@ -214,57 +215,57 @@ function OrderDetailModal({ order, onClose, onUpdateStatus, isUpdating }: {
               <div className="flex items-center gap-2 text-sm">
                 <User size={14} className="text-gray-400" />
                 <span className="text-gray-500">Tên:</span>
-                <span className="font-medium">{order.customerName || order.shippingName}</span>
+                <span className="font-medium">
+                  {o.customerName || o.shippingName}
+                  {o.customerEmail && (
+                    <span className="text-gray-400 font-normal"> - {o.customerEmail.split('@')[0]}</span>
+                  )}
+                </span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <Phone size={14} className="text-gray-400" />
                 <span className="text-gray-500">SĐT:</span>
-                <span className="font-medium">{order.customerPhone || order.shippingPhone}</span>
+                <span className="font-medium">{o.customerPhone || o.shippingPhone}</span>
               </div>
-              {order.customerEmail && (
+              {o.customerEmail && (
                 <div className="flex items-center gap-2 text-sm">
                   <Mail size={14} className="text-gray-400" />
                   <span className="text-gray-500">Email:</span>
-                  <span className="font-medium">{order.customerEmail}</span>
+                  <span className="font-medium">{o.customerEmail}</span>
                 </div>
               )}
-              {order.userId && (
+              {o.userId && (
                 <div className="flex items-center gap-2 text-sm">
                   <span className="text-gray-500">User ID:</span>
-                  <span className="font-mono text-xs bg-gray-200 px-2 py-0.5 rounded">#{order.userId}</span>
+                  <span className="font-mono text-xs bg-gray-200 px-2 py-0.5 rounded">#{o.userId}</span>
                 </div>
               )}
             </div>
           </section>
 
-          {/* Shipping Address */}
+          {/* Shipping */}
           <section>
             <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
               <MapPin size={16} /> Địa chỉ giao hàng
             </h4>
             <div className="bg-gray-50 rounded-xl p-4 text-sm space-y-1">
-              <p className="font-medium">{order.shippingName} — {order.shippingPhone}</p>
-              <p className="text-gray-600">
-                {order.shippingAddress}, {order.shippingWard}, {order.shippingDistrict}, {order.shippingProvince}
-              </p>
+              <p className="font-medium">{o.shippingName} — {o.shippingPhone}</p>
+              <p className="text-gray-600">{o.shippingAddress}, {o.shippingWard}, {o.shippingDistrict}, {o.shippingProvince}</p>
             </div>
           </section>
 
-          {/* Order Items */}
+          {/* Items */}
           <section>
             <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-              <Package size={16} /> Sản phẩm ({order.items.length})
+              <Package size={16} /> Sản phẩm ({o.items.length})
             </h4>
             <div className="border rounded-xl overflow-hidden">
-              {order.items.map((item, i) => (
+              {o.items.map((item, i) => (
                 <div key={item.id} className={`flex items-center gap-4 p-3 ${i > 0 ? 'border-t' : ''}`}>
-                  {item.productImage ? (
-                    <img src={item.productImage} alt="" className="w-14 h-14 object-cover rounded-lg bg-gray-100" />
-                  ) : (
-                    <div className="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center">
-                      <Package size={20} className="text-gray-300" />
-                    </div>
-                  )}
+                  {item.productImage
+                    ? <img src={item.productImage} alt="" className="w-14 h-14 object-cover rounded-lg bg-gray-100" />
+                    : <div className="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center"><Package size={20} className="text-gray-300" /></div>
+                  }
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm truncate">{item.productName}</p>
                     {item.productSku && <p className="text-xs text-gray-400">SKU: {item.productSku}</p>}
@@ -279,7 +280,7 @@ function OrderDetailModal({ order, onClose, onUpdateStatus, isUpdating }: {
             </div>
           </section>
 
-          {/* Payment Summary */}
+          {/* Payment */}
           <section>
             <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
               <CreditCard size={16} /> Thanh toán
@@ -287,103 +288,137 @@ function OrderDetailModal({ order, onClose, onUpdateStatus, isUpdating }: {
             <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-500">Phương thức</span>
-                <span className="font-medium">{PAYMENT_METHOD_LABEL[order.paymentMethod] || order.paymentMethod}</span>
+                <span className="font-medium">{PAYMENT_METHOD_LABEL[o.paymentMethod] || o.paymentMethod}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Trạng thái TT</span>
-                <span className="font-medium capitalize">{order.paymentStatus}</span>
+                <span className={`font-medium ${o.paymentStatus === 'paid' ? 'text-green-600' : o.paymentStatus === 'failed' ? 'text-red-600' : ''}`}>
+                  {o.paymentStatus === 'paid' ? 'Đã thanh toán' : o.paymentStatus === 'failed' ? 'Thất bại' : o.paymentStatus === 'refunded' ? 'Đã hoàn tiền' : 'Chờ thanh toán'}
+                </span>
               </div>
               <hr />
-              <div className="flex justify-between">
-                <span className="text-gray-500">Tạm tính</span>
-                <span>{formatPrice(order.subtotal)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Phí vận chuyển</span>
-                <span>{formatPrice(order.shippingFee)}</span>
-              </div>
-              {order.discountAmount > 0 && (
+              <div className="flex justify-between"><span className="text-gray-500">Tạm tính</span><span>{formatPrice(o.subtotal)}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">Phí vận chuyển</span><span>{formatPrice(o.shippingFee)}</span></div>
+              {o.discountAmount > 0 && (
                 <div className="flex justify-between text-green-600">
-                  <span>Giảm giá {order.voucherCode && `(${order.voucherCode})`}</span>
-                  <span>-{formatPrice(order.discountAmount)}</span>
+                  <span>Giảm giá {o.voucherCode && `(${o.voucherCode})`}</span>
+                  <span>-{formatPrice(o.discountAmount)}</span>
                 </div>
               )}
-              {(order.refundAmount ?? 0) > 0 && (
-                <div className="flex justify-between text-orange-600">
-                  <span>Hoàn tiền</span>
-                  <span>-{formatPrice(order.refundAmount!)}</span>
-                </div>
+              {(o.refundAmount ?? 0) > 0 && (
+                <div className="flex justify-between text-orange-600"><span>Hoàn tiền</span><span>-{formatPrice(o.refundAmount!)}</span></div>
               )}
               <hr />
               <div className="flex justify-between font-bold text-base">
-                <span>Tổng cộng</span>
-                <span className="text-primary-600">{formatPrice(order.totalAmount)}</span>
+                <span>Tổng cộng</span><span className="text-primary-600">{formatPrice(o.totalAmount)}</span>
               </div>
             </div>
           </section>
 
-          {/* Timeline */}
-          {timeline.length > 0 && (
-            <section>
-              <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                <Clock size={16} /> Lịch sử đơn hàng
-              </h4>
-              <div className="space-y-3">
-                {timeline.map((t, i) => {
-                  const Icon = t.icon
-                  return (
-                    <div key={i} className="flex items-center gap-3 text-sm">
-                      <div className="w-8 h-8 rounded-full bg-primary-50 flex items-center justify-center">
-                        <Icon size={14} className="text-primary-600" />
+          {/* Audit Trail — lịch sử đầy đủ: ai làm gì lúc nào */}
+          <section>
+            <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+              <ShieldCheck size={16} /> Lịch sử xử lý đơn hàng
+            </h4>
+            {o.history && o.history.length > 0 ? (
+              <div className="relative">
+                {/* Vertical line */}
+                <div className="absolute left-4 top-2 bottom-2 w-0.5 bg-gray-200" />
+                <div className="space-y-3">
+                  {o.history.map((h, i) => {
+                    const isCancelled = h.toStatus === 'cancelled'
+                    const isCompleted = h.toStatus === 'completed'
+                    return (
+                      <div key={h.id} className="flex gap-4 relative">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10
+                          ${isCancelled ? 'bg-red-100' : isCompleted ? 'bg-green-100' : 'bg-primary-50'}`}>
+                          {isCancelled
+                            ? <AlertCircle size={14} className="text-red-500" />
+                            : isCompleted
+                            ? <CheckCircle size={14} className="text-green-500" />
+                            : <ArrowRight size={14} className="text-primary-500" />
+                          }
+                        </div>
+                        <div className="flex-1 bg-gray-50 rounded-xl p-3 text-sm">
+                          <div className="flex items-center justify-between flex-wrap gap-1">
+                            <div className="flex items-center gap-2">
+                              {h.fromStatus && (
+                                <>
+                                  <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${ORDER_STATUS_LABEL[h.fromStatus]?.color}`}>
+                                    {ORDER_STATUS_LABEL[h.fromStatus]?.label}
+                                  </span>
+                                  <ArrowRight size={12} className="text-gray-400" />
+                                </>
+                              )}
+                              <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${ORDER_STATUS_LABEL[h.toStatus]?.color}`}>
+                                {ORDER_STATUS_LABEL[h.toStatus]?.label}
+                              </span>
+                            </div>
+                            <span className="text-xs text-gray-400">{formatDate(h.createdAt, 'DD/MM/YYYY HH:mm')}</span>
+                          </div>
+                          <div className="mt-1.5 flex items-center gap-2 text-xs text-gray-500">
+                            <User size={11} />
+                            <span className="font-medium text-gray-700">
+                              {h.performedByName
+                                ? h.performedByUsername
+                                  ? `${h.performedByName} - ${h.performedByUsername}`
+                                  : h.performedByName
+                                : 'Hệ thống'}
+                            </span>
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium
+                              ${h.actorType === 'staff' || h.actorType === 'admin' ? 'bg-blue-50 text-blue-600'
+                                : h.actorType === 'customer' ? 'bg-gray-100 text-gray-600'
+                                : 'bg-gray-100 text-gray-500'}`}>
+                              {ACTOR_LABEL[h.actorType] ?? h.actorType}
+                            </span>
+                          </div>
+                          {h.note && <p className="mt-1 text-xs text-gray-600 italic">"{h.note}"</p>}
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <span className="font-medium">{t.label}</span>
-                      </div>
-                      <span className="text-gray-400 text-xs">{formatDate(t.time!, 'DD/MM/YYYY HH:mm')}</span>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
               </div>
-            </section>
-          )}
+            ) : (
+              <p className="text-sm text-gray-400 italic">Chưa có lịch sử (đơn hàng cũ trước khi cập nhật hệ thống)</p>
+            )}
+          </section>
 
           {/* Notes */}
-          {(order.note || order.cancelledReason) && (
+          {(o.note || o.cancelledReason) && (
             <section>
               <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                 <FileText size={16} /> Ghi chú
               </h4>
               <div className="bg-gray-50 rounded-xl p-4 text-sm space-y-2">
-                {order.note && <p><span className="text-gray-500">Ghi chú KH:</span> {order.note}</p>}
-                {order.cancelledReason && (
-                  <p className="text-red-600"><span className="text-gray-500">Lý do hủy:</span> {order.cancelledReason}</p>
-                )}
+                {o.note && <p><span className="text-gray-500">Ghi chú KH:</span> {o.note}</p>}
+                {o.cancelledReason && <p className="text-red-600"><span className="text-gray-500">Lý do hủy:</span> {o.cancelledReason}</p>}
               </div>
             </section>
           )}
 
-          {/* Admin: Update Status */}
+          {/* Update Status */}
           <section className="border-t pt-6">
-            <h4 className="text-sm font-semibold text-gray-700 mb-3">Cập nhật đơn hàng</h4>
+            <h4 className="text-sm font-semibold text-gray-700 mb-3">Cập nhật trạng thái</h4>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Trạng thái</label>
+                <label className="block text-xs text-gray-500 mb-1">Trạng thái mới</label>
                 <select value={newStatus} onChange={e => setNewStatus(e.target.value)}
                   className="border rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:border-primary-500">
                   {STATUS_OPTS.slice(1).map(s => <option key={s} value={s}>{ORDER_STATUS_LABEL[s]?.label}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Ghi chú nội bộ</label>
+                <label className="block text-xs text-gray-500 mb-1">Ghi chú nội bộ (lưu vào lịch sử)</label>
                 <textarea value={staffNote} onChange={e => setStaffNote(e.target.value)}
-                  rows={2} placeholder="Ghi chú cho nhân viên..."
+                  rows={2} placeholder="VD: Đã liên hệ khách, sẽ giao ngày mai..."
                   className="border rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:border-primary-500 resize-none" />
               </div>
               <button
-                disabled={isUpdating || (newStatus === order.status && staffNote === (order.staffNote || ''))}
+                disabled={isUpdating || newStatus === o.status}
                 onClick={() => onUpdateStatus(newStatus, staffNote || undefined)}
                 className="btn-primary w-full disabled:opacity-50">
-                {isUpdating ? 'Đang cập nhật...' : 'Cập nhật'}
+                {isUpdating ? 'Đang cập nhật...' : 'Xác nhận cập nhật'}
               </button>
             </div>
           </section>
