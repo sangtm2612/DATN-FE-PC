@@ -101,7 +101,7 @@ export default function ReturnRequestPage() {
                 <img src={item.productImage || '/placeholder.png'} alt="" className="w-12 h-12 object-contain bg-white rounded-lg border flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{item.productName}</p>
-                  <p className="text-xs text-gray-400">Đã mua x{item.quantity} • {formatPrice(item.unitPrice)}</p>
+                  <p className="text-xs text-gray-400">Đã mua x{item.quantity} - {formatPrice(item.unitPrice)}</p>
                 </div>
                 {checked && (
                   <input

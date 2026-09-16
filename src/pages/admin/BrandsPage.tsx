@@ -65,7 +65,7 @@ export default function AdminBrandsPage() {
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
             <div className="flex items-center justify-between px-6 py-4 border-b">
               <h3 className="font-bold">{editing ? 'Sửa thương hiệu' : 'Thêm thương hiệu'}</h3>
-              <button onClick={() => setShowForm(false)}>✕</button>
+              <button onClick={() => setShowForm(false)}>X</button>
             </div>
             <div className="p-6 space-y-3">
               {[{k:'name',l:'Tên'},{k:'slug',l:'Slug'},{k:'logoUrl',l:'URL Logo'},{k:'website',l:'Website'},{k:'description',l:'Mô tả'}].map(({k,l}) => (

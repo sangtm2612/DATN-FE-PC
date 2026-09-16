@@ -2,6 +2,8 @@ import api from '@/lib/axios'
 import type { Order, ApiResponse } from '@/types'
 
 export interface CreateOrderPayload {
+  sessionId?: string  // For guest checkout
+  guestEmail?: string // Email for guest to receive order confirmation
   shippingName: string
   shippingPhone: string
   shippingProvince: string

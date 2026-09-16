@@ -36,7 +36,7 @@ const emptyForm: ProductForm = {
 }
 
 // Flatten category tree thành danh sách tuyến tính có depth để render <select> dạng cây.
-// Ví dụ: "Linh kiện" (depth 0) → "└─ CPU" (depth 1) → "└─ Sub-CPU" (depth 2).
+// Ví dụ: "Linh kiện" (depth 0) -> "CPU" (depth 1) -> "Sub-CPU" (depth 2).
 function flattenCategoryTree(
   nodes: Category[],
   depth = 0,
@@ -395,7 +395,7 @@ export default function AdminProductsPage() {
                     <option value="">-- Chọn danh mục --</option>
                     {flattenCategoryTree(categories || []).map(c => (
                       <option key={c.id} value={c.id}>
-                        {'\u00A0\u00A0'.repeat(c.depth) + (c.depth > 0 ? '└─ ' : '') + c.name}
+                        {'\u00A0\u00A0'.repeat(c.depth) + (c.depth > 0 ? '- ' : '') + c.name}
                       </option>
                     ))}
                   </select>

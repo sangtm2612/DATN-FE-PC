@@ -39,7 +39,7 @@ export default function AdminStoresPage() {
                 </div>
               )}
               {store.openHours && (
-                <p className="text-xs text-gray-400">🕐 {store.openHours}</p>
+                <p className="text-xs text-gray-400">{store.openHours}</p>
               )}
             </div>
             <div className={`mt-3 text-xs px-2 py-0.5 rounded-full inline-block font-medium

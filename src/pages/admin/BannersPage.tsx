@@ -67,7 +67,7 @@ export default function AdminBannersPage() {
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
             <div className="flex items-center justify-between px-6 py-4 border-b">
               <h3 className="font-bold">{editing ? 'Sửa Banner' : 'Thêm Banner'}</h3>
-              <button onClick={() => setShowForm(false)}>✕</button>
+              <button onClick={() => setShowForm(false)}>X</button>
             </div>
             <div className="p-6 space-y-3">
               {[{k:'title',l:'Tiêu đề'},{k:'imageUrl',l:'URL Ảnh *'},{k:'linkUrl',l:'Link đích'}].map(({k,l}) => (

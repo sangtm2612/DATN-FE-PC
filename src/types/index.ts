@@ -1,4 +1,4 @@
-// ─── Auth ───────────────────────────────────────────────────
+// Auth
 export interface User {
   id: number
   fullName: string
@@ -16,7 +16,7 @@ export interface AuthResponse {
   user: User
 }
 
-// ─── Category ────────────────────────────────────────────────
+// Category
 export interface Category {
   id: number
   name: string
@@ -30,7 +30,7 @@ export interface Category {
   children?: Category[]
 }
 
-// ─── Brand ──────────────────────────────────────────────────
+// Brand
 export interface Brand {
   id: number
   name: string
@@ -39,7 +39,7 @@ export interface Brand {
   website?: string
 }
 
-// ─── Product ─────────────────────────────────────────────────
+// Product
 export interface ProductImage {
   id: number
   imageUrl: string
@@ -95,7 +95,7 @@ export interface Tag {
   slug: string
 }
 
-// ─── Cart ────────────────────────────────────────────────────
+// Cart
 export interface CartItem {
   productId: number
   productName: string
@@ -116,7 +116,7 @@ export interface Cart {
   autoDiscount?: number
 }
 
-// ─── Order ──────────────────────────────────────────────────
+// Order
 export type OrderStatus =
   | 'pending' | 'confirmed' | 'processing'
   | 'shipping' | 'delivered' | 'completed'
@@ -167,7 +167,7 @@ export interface Order {
   items: OrderItem[]
 }
 
-// ─── Return Request (doi/tra hang) ────────────────────────────
+// Return Request (doi/tra hang)
 export type ReturnRequestStatus = 'pending' | 'reviewing' | 'approved' | 'rejected' | 'completed'
 export type ReturnReasonType = 'defective' | 'wrong_item' | 'damaged_delivery' | 'not_satisfied'
 
@@ -199,7 +199,7 @@ export interface ReturnRequest {
   userPhone?: string
 }
 
-// ─── Build PC ───────────────────────────────────────────────
+// Build PC
 export interface PcBuildItem {
   id: number
   componentTypeId: number
@@ -220,7 +220,7 @@ export interface PcBuild {
   items: PcBuildItem[]
 }
 
-// ─── Review ─────────────────────────────────────────────────
+// Review
 export interface Review {
   id: number
   rating: number
@@ -233,7 +233,7 @@ export interface Review {
   images?: { id: number; imageUrl: string }[]
 }
 
-// ─── Warranty ────────────────────────────────────────────────
+// Warranty
 export interface Warranty {
   id: number
   serialNumber?: string
@@ -244,7 +244,7 @@ export interface Warranty {
   product: { id: number; name: string; thumbnail?: string }
 }
 
-// ─── Service Request (yeu cau sua chua) ───────────────────────
+// Service Request (yeu cau sua chua)
 export type ServiceRequestStatus = 'received' | 'diagnosing' | 'repairing' | 'waiting_part' | 'done' | 'returned'
 
 export interface ServiceRequest {
@@ -272,7 +272,7 @@ export interface ServiceRequest {
   storeId?: number
 }
 
-// ─── Shipping ───────────────────────────────────────────────
+// Shipping
 export interface ShippingMethod {
   id: number
   name: string
@@ -283,7 +283,7 @@ export interface ShippingMethod {
   isActive: boolean
 }
 
-// ─── Store ──────────────────────────────────────────────────
+// Store
 export interface Store {
   id: number
   name: string
@@ -301,7 +301,7 @@ export interface Store {
   images?: { id: number; imageUrl: string }[]
 }
 
-// ─── Banner ─────────────────────────────────────────────────
+// Banner
 export interface Banner {
   id: number
   title: string
@@ -312,7 +312,7 @@ export interface Banner {
   sortOrder: number
 }
 
-// ─── Blog ───────────────────────────────────────────────────
+// Blog
 export interface BlogPost {
   id: number
   title: string
@@ -330,7 +330,7 @@ export interface BlogPost {
   mentionedProducts?: Product[]
 }
 
-// ─── Voucher ────────────────────────────────────────────────
+// Voucher
 export interface Voucher {
   id: number
   code: string
@@ -341,7 +341,7 @@ export interface Voucher {
   maxDiscount?: number
 }
 
-// ─── API ────────────────────────────────────────────────────
+// API
 export interface ApiResponse<T> {
   success: boolean
   data?: T

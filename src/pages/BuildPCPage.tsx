@@ -27,9 +27,9 @@ interface SelectedComponent {
 }
 
 const COMPONENT_ICONS: Record<string, string> = {
-  cpu: '🔲', mainboard: '🟦', ram: '💾', ssd: '💿', hdd: '🗂️',
-  vga: '🎮', psu: '⚡', case: '📦', monitor: '🖥️', keyboard: '⌨️',
-  mouse: '🖱️', headphone: '🎧', speaker: '🔊', cooling: '❄️',
+  cpu: 'CPU', mainboard: 'MB', ram: 'RAM', ssd: 'SSD', hdd: 'HDD',
+  vga: 'VGA', psu: 'PSU', case: 'Case', monitor: 'Mon', keyboard: 'KB',
+  mouse: 'MS', headphone: 'HP', speaker: 'SP', cooling: 'Cool',
 }
 
 export default function BuildPCPage() {
@@ -114,6 +114,9 @@ export default function BuildPCPage() {
       if (res.data.data) setCart(res.data.data)
       toast.success('Đã thêm tất cả vào giỏ hàng')
     },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Không thể thêm vào giỏ hàng!')
+    },
   })
 
   const saveBuild = useMutation({
@@ -160,7 +163,7 @@ export default function BuildPCPage() {
 
       {/* Promo banner */}
       <div className="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-xl p-4 mb-6 text-gray-900">
-        <p className="font-bold">🎉 Ưu đãi Build PC:</p>
+        <p className="font-bold">Ưu đãi Build PC:</p>
         <p className="text-sm mt-1">Giảm <strong>30%</strong> CPU khi chọn đủ Main + RAM + SSD + Nguồn + Case</p>
         <p className="text-sm">Giảm <strong>50%</strong> CPU khi chọn thêm VGA từ RX6500XT/RTX3050 trở lên</p>
       </div>
@@ -176,8 +179,8 @@ export default function BuildPCPage() {
                   className={`card p-4 flex items-center gap-4 transition-shadow hover:shadow-md
                     ${type.isRequired && !selected ? 'border-l-4 border-l-orange-400' : ''}`}
                 >
-                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-xl flex-shrink-0">
-                    {COMPONENT_ICONS[type.slug] || '🔧'}
+                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0">
+                    {COMPONENT_ICONS[type.slug] || 'PC'}
                   </div>
 
                   <div className="flex-1 min-w-0">
@@ -346,7 +349,7 @@ export default function BuildPCPage() {
                         <p className="font-medium text-gray-800 text-sm line-clamp-2">{product.name}</p>
                         <p className="text-xs text-gray-400 mt-0.5">
                           {product.stockQty > 0 ? `Còn ${product.stockQty}` : <span className="text-red-500">Hết hàng</span>}
-                          {product.warrantyMonths > 0 && ` • BH ${product.warrantyMonths}T`}
+                          {product.warrantyMonths > 0 && ` - BH ${product.warrantyMonths}T`}
                         </p>
                       </div>
                       <div className="text-right flex-shrink-0">

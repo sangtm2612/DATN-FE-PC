@@ -2,7 +2,7 @@ import api from '@/lib/axios'
 import type { Cart, ApiResponse } from '@/types'
 
 export const cartService = {
-  getCart: () =>
+  get: () =>
     api.get<ApiResponse<Cart>>('/cart'),
 
   addItem: (productId: number, quantity = 1) =>
@@ -14,7 +14,7 @@ export const cartService = {
   removeItem: (productId: number) =>
     api.delete<ApiResponse<Cart>>(`/cart/items/${productId}`),
 
-  clearCart: () =>
+  clear: () =>
     api.delete<ApiResponse<Cart>>('/cart'),
 
   mergeCart: (sessionId: string) =>

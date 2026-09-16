@@ -45,6 +45,9 @@ export default function LoginPage() {
       toast.success(`Chào mừng, ${user.fullName}!`)
       navigate(from, { replace: true })
     },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!')
+    },
   })
 
   return (
@@ -61,7 +64,7 @@ export default function LoginPage() {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu</label>
           <div className="relative">
-            <input {...register('password')} type={showPwd ? 'text' : 'password'} className="input pr-10" placeholder="••••••••" />
+            <input {...register('password')} type={showPwd ? 'text' : 'password'} className="input pr-10" placeholder="........" />
             <button type="button" onClick={() => setShowPwd(!showPwd)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
               {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}

@@ -223,7 +223,7 @@ export default function BlogEditorPage() {
                     placeholder="Nhập nội dung bài viết... (Hỗ trợ HTML)"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    💡 Hỗ trợ HTML. Sử dụng &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;img&gt;, v.v.
+                    Hỗ trợ HTML. Sử dụng &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;img&gt;, v.v.
                   </p>
                 </div>
               </div>

@@ -77,7 +77,7 @@ export default function AdminVouchersPage() {
           <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white">
               <h3 className="font-bold text-lg">Tạo Voucher mới</h3>
-              <button onClick={() => setShowForm(false)}>✕</button>
+              <button onClick={() => setShowForm(false)}>X</button>
             </div>
             <div className="p-6 space-y-4">
               <div>

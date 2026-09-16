@@ -9,6 +9,7 @@ import { useCartStore } from '@/store/cartStore'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productService } from '@/services/productService'
 import api from '@/lib/axios'
+import { formatPrice } from '@/lib/utils'
 import type { Category } from '@/types'
 import toast from 'react-hot-toast'
 
@@ -91,7 +92,7 @@ export default function Header() {
     logout()
     setUserMenuOpen(false)
     toast.success('Đã đăng xuất')
-    navigate('/')
+    navigate('/login')
   }
 
   return (
@@ -181,7 +182,7 @@ export default function Header() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800 truncate">{p.name}</p>
                     <p className="text-xs text-primary-500 font-semibold">
-                      {p.price.toLocaleString('vi-VN')}đ
+                      {formatPrice(p.price)}
                     </p>
                   </div>
                 </Link>

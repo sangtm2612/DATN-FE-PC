@@ -69,7 +69,7 @@ export default function OrderHistoryPage() {
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <span className="font-bold text-gray-800">{order.orderCode}</span>
-                    <span className="text-gray-400 text-sm ml-2">• {formatDate(order.createdAt, 'DD/MM/YYYY')}</span>
+                    <span className="text-gray-400 text-sm ml-2">- {formatDate(order.createdAt, 'DD/MM/YYYY')}</span>
                   </div>
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${statusInfo?.color}`}>
                     {statusInfo?.label}

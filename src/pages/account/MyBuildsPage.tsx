@@ -30,7 +30,7 @@ export default function MyBuildsPage() {
       const build = builds?.find(b => b.id === buildId)
       if (!build) return
       // Giỏ hàng chỉ chứa đúng linh kiện của cấu hình này khi đặt hàng
-      await cartService.clearCart()
+      await cartService.clear()
       for (const item of build.items) {
         await cartService.addItem(item.productId, item.quantity)
       }

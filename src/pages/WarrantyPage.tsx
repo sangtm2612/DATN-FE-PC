@@ -21,6 +21,9 @@ export default function WarrantyPage() {
     mutationFn: () => api.get<{ data: Warranty }>(
       `/warranties/lookup?${mode === 'serial' ? `serial=${serial}` : `orderCode=${orderCode}`}`
     ),
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Không tìm thấy thông tin bảo hành!')
+    },
   })
 
   const warranty: Warranty | undefined = lookup.data?.data?.data
@@ -146,9 +149,9 @@ export default function WarrantyPage() {
                 <div className="bg-blue-50 rounded-lg p-4 text-sm text-blue-700">
                   <p className="font-medium mb-1">Quyền lợi bảo hành:</p>
                   <ul className="space-y-0.5 text-blue-600">
-                    <li>• Sửa chữa miễn phí lỗi do nhà sản xuất</li>
-                    <li>• Đổi mới trong 30 ngày nếu lỗi không sửa được</li>
-                    <li>• Mang đến bất kỳ cửa hàng KinhDuanPC nào</li>
+                    <li>- Sửa chữa miễn phí lỗi do nhà sản xuất</li>
+                    <li>- Đổi mới trong 30 ngày nếu lỗi không sửa được</li>
+                    <li>- Mang đến bất kỳ cửa hàng KinhDuanPC nào</li>
                   </ul>
                 </div>
               )}

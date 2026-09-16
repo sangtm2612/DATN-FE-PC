@@ -2,6 +2,7 @@ import axios from 'axios'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/authStore'
 import { getOrCreateSessionId } from '@/lib/utils'
+import { handleTokenExpired } from '@/lib/auth'
 
 const api = axios.create({
   baseURL: '/api',
@@ -44,12 +45,13 @@ api.interceptors.response.use(
           return api(original)
         }
       } catch {
-        useAuthStore.getState().logout()
-        window.location.href = '/login'
+        // Token expired hoặc refresh thất bại
+        handleTokenExpired()
+        return Promise.reject(error)
       }
     }
 
-    const msg = error.response?.data?.error?.message || 'Có lỗi xảy ra, vui lòng thử lại'
+    const msg = error.response?.data?.error?.message || error.response?.data?.message || 'Có lỗi xảy ra, vui lòng thử lại'
     if (error.response?.status !== 401) toast.error(msg)
 
     return Promise.reject(error)

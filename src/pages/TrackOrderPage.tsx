@@ -1,17 +1,32 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { orderService } from '@/services/orderService'
 import { formatPrice, formatDate, ORDER_STATUS_LABEL, PAYMENT_METHOD_LABEL } from '@/lib/utils'
 import type { Order } from '@/types'
 import { Search, Package } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 export default function TrackOrderPage() {
-  const [orderCode, setOrderCode] = useState('')
-  const [phone, setPhone] = useState('')
+  const [searchParams] = useSearchParams()
+  const [orderCode, setOrderCode] = useState(searchParams.get('code') || '')
+  const [phone, setPhone] = useState(searchParams.get('phone') || '')
 
   const track = useMutation({
     mutationFn: () => orderService.track(orderCode, phone),
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Không tìm thấy đơn hàng!')
+    },
   })
+
+  // Auto-submit if both parameters are present in URL
+  useEffect(() => {
+    const code = searchParams.get('code')
+    const phoneParam = searchParams.get('phone')
+    if (code && phoneParam) {
+      track.mutate()
+    }
+  }, []) // Only run once on mount
 
   const order: Order | undefined = track.data?.data?.data
 
@@ -71,7 +86,7 @@ export default function TrackOrderPage() {
                     <div key={step.key} className={`flex flex-col items-center text-xs ${i <= currentStep ? 'text-primary-500' : 'text-gray-400'}`}>
                       <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] mb-1
                         ${i < currentStep ? 'bg-primary-500 text-white' : i === currentStep ? 'bg-primary-500 text-white ring-4 ring-primary-100' : 'bg-gray-200'}`}>
-                        {i < currentStep ? '✓' : i + 1}
+                        {i < currentStep ? 'OK' : i + 1}
                       </div>
                       <span className="hidden sm:block text-center w-16">{step.label}</span>
                     </div>
@@ -111,7 +126,7 @@ export default function TrackOrderPage() {
                     className="w-14 h-14 object-contain bg-gray-50 rounded-lg border" />
                   <div className="flex-1">
                     <p className="text-sm font-medium">{item.productName}</p>
-                    <p className="text-xs text-gray-400">x{item.quantity} • BH: {item.warrantyMonths} tháng</p>
+                    <p className="text-xs text-gray-400">x{item.quantity} - BH: {item.warrantyMonths} tháng</p>
                   </div>
                   <p className="font-semibold text-sm">{formatPrice(item.totalPrice)}</p>
                 </div>

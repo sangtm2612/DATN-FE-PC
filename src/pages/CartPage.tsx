@@ -19,16 +19,25 @@ export default function CartPage() {
   const updateItem = useMutation({
     mutationFn: ({ id, qty }: { id: number; qty: number }) => cartService.updateItem(id, qty),
     onSuccess: (res) => { if (res.data.data) setCart(res.data.data) },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Không thể cập nhật giỏ hàng!')
+    },
   })
 
   const removeItem = useMutation({
     mutationFn: (id: number) => cartService.removeItem(id),
     onSuccess: (res) => { if (res.data.data) setCart(res.data.data); toast.success('Đã xóa sản phẩm') },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Không thể xóa sản phẩm!')
+    },
   })
 
   const clearCart = useMutation({
-    mutationFn: () => cartService.clearCart(),
+    mutationFn: () => cartService.clear(),
     onSuccess: (res) => { if (res.data.data) setCart(res.data.data); toast.success('Đã xóa giỏ hàng') },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Không thể xóa giỏ hàng!')
+    },
   })
 
   if (cart.items.length === 0) {
@@ -125,7 +134,7 @@ export default function CartPage() {
               Tiến hành thanh toán <ArrowRight size={16} />
             </button>
             <Link to="/products" className="block text-center text-sm text-gray-500 hover:text-primary-500 transition-colors">
-              ← Tiếp tục mua sắm
+              &lt; Tiếp tục mua sắm
             </Link>
           </div>
         </div>

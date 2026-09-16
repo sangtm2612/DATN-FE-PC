@@ -65,6 +65,9 @@ export default function ProductDetailPage() {
       if (res.data.data) { setCart(res.data.data); setOpen(true) }
       toast.success('Đã thêm vào giỏ hàng')
     },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Không thể thêm vào giỏ hàng!')
+    },
   })
 
   const submitReview = useMutation({
@@ -76,6 +79,9 @@ export default function ProductDetailPage() {
       qc.invalidateQueries({ queryKey: ['reviews', product?.id] })
       qc.invalidateQueries({ queryKey: ['product', slug] })
     },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Không thể gửi đánh giá!')
+    },
   })
 
   const toggleHelpful = useMutation({
@@ -86,6 +92,9 @@ export default function ProductDetailPage() {
         ...prev,
         [reviewId]: { isHelpful: res.data.data.isHelpful, count: res.data.data.helpfulCount },
       }))
+    },
+    onError: () => {
+      toast.error('Vui lòng đăng nhập để đánh giá hữu ích!')
     },
   })
 
@@ -161,7 +170,7 @@ export default function ProductDetailPage() {
               </div>
               <span className="font-medium">{product.ratingAvg}</span>
               <span className="text-gray-400">({product.ratingCount} đánh giá)</span>
-              <span className="text-gray-400">• Đã bán {product.soldQty}</span>
+              <span className="text-gray-400">- Đã bán {product.soldQty}</span>
             </div>
           )}
 

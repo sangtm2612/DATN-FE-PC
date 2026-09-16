@@ -12,6 +12,9 @@ export default function ForgotPasswordPage() {
   const forgot = useMutation({
     mutationFn: () => authService.forgotPassword(email),
     onSuccess: () => { setSent(true); toast.success('Email đã được gửi!') },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Không thể gửi email. Vui lòng thử lại!')
+    },
   })
 
   if (sent) return (
@@ -21,7 +24,7 @@ export default function ForgotPasswordPage() {
       </div>
       <h2 className="text-xl font-bold mb-2">Kiểm tra email</h2>
       <p className="text-gray-500 text-sm mb-6">Chúng tôi đã gửi link đặt lại mật khẩu đến <strong>{email}</strong>. Link có hiệu lực trong 15 phút.</p>
-      <Link to="/login" className="text-primary-500 text-sm hover:underline">← Quay lại đăng nhập</Link>
+      <Link to="/login" className="text-primary-500 text-sm hover:underline">&lt; Quay lại đăng nhập</Link>
     </div>
   )
 
@@ -40,7 +43,7 @@ export default function ForgotPasswordPage() {
         </button>
       </form>
       <p className="mt-4 text-center text-sm">
-        <Link to="/login" className="text-primary-500 hover:underline">← Quay lại đăng nhập</Link>
+        <Link to="/login" className="text-primary-500 hover:underline">&lt; Quay lại đăng nhập</Link>
       </p>
     </div>
   )

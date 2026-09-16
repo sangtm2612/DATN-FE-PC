@@ -156,7 +156,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-lg">Đơn hàng gần đây</h2>
           <Link to="/admin/orders" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
-            Xem tất cả →
+            Xem tất cả &gt;
           </Link>
         </div>
         {!recentOrders?.length ? (

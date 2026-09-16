@@ -145,7 +145,7 @@ export default function HomePage() {
         <section className="bg-primary-50 py-8">
           <div className="container">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="section-title mb-0 text-primary-600">🔥 Đang giảm giá</h2>
+              <h2 className="section-title mb-0 text-primary-600">Đang giảm giá</h2>
               <Link to="/products?sale=true" className="text-primary-500 text-sm font-medium flex items-center gap-1 hover:underline">
                 Xem tất cả <ChevronRight size={16} />
               </Link>

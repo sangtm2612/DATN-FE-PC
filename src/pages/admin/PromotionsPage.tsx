@@ -164,7 +164,7 @@ export default function AdminPromotionsPage() {
           <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white">
               <h3 className="font-bold text-lg">Tạo khuyến mãi mới</h3>
-              <button onClick={() => setShowForm(false)}>✕</button>
+              <button onClick={() => setShowForm(false)}>X</button>
             </div>
             <div className="p-6 space-y-4">
               <div>
@@ -242,7 +242,7 @@ export default function AdminPromotionsPage() {
                       {flattenCategoryTree(categories).map(c => (
                         <button type="button" key={c.id} onClick={() => toggleScope('categoryIds', c.id)}
                           className={`text-xs px-2.5 py-1 rounded-full border ${form.categoryIds.includes(c.id) ? 'bg-primary-500 text-white border-primary-500' : 'border-gray-200 text-gray-600'}`}>
-                          {'\u00A0\u00A0'.repeat(c.depth) + (c.depth > 0 ? '└─ ' : '') + c.name}
+                          {'\u00A0\u00A0'.repeat(c.depth) + (c.depth > 0 ? '- ' : '') + c.name}
                         </button>
                       ))}
                     </div>

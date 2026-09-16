@@ -8,19 +8,21 @@ import { useCartStore } from '@/store/cartStore'
 import { useAuthStore } from '@/store/authStore'
 import { orderService, type CreateOrderPayload } from '@/services/orderService'
 import { createVNPayPayment, createMoMoPayment, createZaloPayPayment } from '@/services/paymentService'
-import { formatPrice } from '@/lib/utils'
+import { formatPrice, getOrCreateSessionId } from '@/lib/utils'
 import { PAYMENT_METHOD_LABEL } from '@/lib/utils'
 import api from '@/lib/axios'
 import toast from 'react-hot-toast'
 import type { ShippingMethod, Store } from '@/types'
 import { CreditCard, Banknote, Smartphone, Tag, Truck, Store as StoreIcon } from 'lucide-react'
+import AddressForm from '@/components/checkout/AddressForm'
 
 const schema = z.object({
   shippingName:     z.string().min(2, 'Họ tên tối thiểu 2 ký tự'),
   shippingPhone:    z.string().regex(/^0[0-9]{9}$/, 'Số điện thoại không hợp lệ'),
-  shippingProvince: z.string().min(1, 'Vui lòng chọn tỉnh/thành'),
-  shippingDistrict: z.string().min(1, 'Vui lòng nhập quận/huyện'),
-  shippingWard:     z.string().min(1, 'Vui lòng nhập phường/xã'),
+  guestEmail:       z.string().email('Email không hợp lệ').optional().or(z.literal('')),
+  shippingProvince: z.string().min(1, 'Vui lòng chọn tỉnh/thành phố'),
+  shippingDistrict: z.string().optional().default(''),
+  shippingWard:     z.string().min(1, 'Vui lòng chọn phường/xã/thị trấn'),
   shippingAddress:  z.string().min(5, 'Địa chỉ chi tiết tối thiểu 5 ký tự'),
   note:             z.string().optional(),
 })
@@ -35,7 +37,7 @@ const PAYMENT_METHODS = [
 ]
 
 export default function CheckoutPage() {
-  const { cart } = useCartStore()
+  const { cart, setCart } = useCartStore()
   const { user } = useAuthStore()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -47,10 +49,27 @@ export default function CheckoutPage() {
   const [deliveryMode, setDeliveryMode] = useState<'ship' | 'pickup'>('ship')
   const [pickupStoreId, setPickupStoreId] = useState<number | null>(null)
 
-  const { data: shippingMethods } = useQuery({
-    queryKey: ['shipping-methods'],
-    queryFn: () => api.get<{ data: ShippingMethod[] }>('/shipping-methods').then(r => r.data.data || []),
-  })
+  // Hardcoded shipping methods (không call API nữa)
+  const shippingMethods: ShippingMethod[] = [
+    {
+      id: 1,
+      name: 'Giao hàng tiêu chuẩn',
+      description: 'Giao hàng trong 3-5 ngày',
+      baseFee: 30000,
+      freeThreshold: 1000000,
+      estimatedDays: '3-5 ngày',
+      isActive: true,
+    },
+    {
+      id: 2,
+      name: 'Giao hàng nhanh',
+      description: 'Giao hàng trong 1-2 ngày',
+      baseFee: 50000,
+      freeThreshold: 2000000,
+      estimatedDays: '1-2 ngày',
+      isActive: true,
+    },
+  ]
 
   const { data: stores } = useQuery({
     queryKey: ['stores'],
@@ -61,7 +80,7 @@ export default function CheckoutPage() {
     if (shippingMethods?.length && shippingMethodId === null) {
       setShippingMethodId(shippingMethods[0].id)
     }
-  }, [shippingMethods, shippingMethodId])
+  }, [shippingMethodId])
 
   useEffect(() => {
     if (deliveryMode === 'pickup' && stores?.length && pickupStoreId === null) {
@@ -80,11 +99,12 @@ export default function CheckoutPage() {
             ? 0 : selectedMethod.baseFee)
         : 30_000
 
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       shippingName:  user?.fullName || '',
       shippingPhone: user?.phone || '',
+      guestEmail:    user?.email || '', // Pre-fill email if user is logged in
     },
   })
 
@@ -101,6 +121,9 @@ export default function CheckoutPage() {
     mutationFn: (data: CreateOrderPayload) => orderService.create(data),
     onSuccess: async (res) => {
       const order = res.data.data
+      
+      // Clear cart sau khi đặt hàng thành công
+      setCart({ items: [], totalItems: 0, totalAmount: 0 })
       
       // Kiểm tra payment method
       if (paymentMethod === 'vnpay') {
@@ -170,8 +193,10 @@ export default function CheckoutPage() {
   const total = cart.totalAmount + shippingFee - discount
 
   const onSubmit = (formData: FormData) => {
+    const sessionId = getOrCreateSessionId()
     createOrder.mutate({
       ...formData,
+      sessionId,  // Add sessionId for guest checkout
       paymentMethod,
       voucherCode: voucherApplied ? voucherCode : undefined,
       buildId: buildId ? Number(buildId) : undefined,
@@ -210,21 +235,26 @@ export default function CheckoutPage() {
                   <input {...register('shippingPhone')} className="input" placeholder="0901234567" />
                   {errors.shippingPhone && <p className="text-red-500 text-xs mt-1">{errors.shippingPhone.message}</p>}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tỉnh/Thành phố *</label>
-                  <input {...register('shippingProvince')} className="input" placeholder="Hà Nội" />
-                  {errors.shippingProvince && <p className="text-red-500 text-xs mt-1">{errors.shippingProvince.message}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Quận/Huyện *</label>
-                  <input {...register('shippingDistrict')} className="input" placeholder="Cầu Giấy" />
-                  {errors.shippingDistrict && <p className="text-red-500 text-xs mt-1">{errors.shippingDistrict.message}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phường/Xã *</label>
-                  <input {...register('shippingWard')} className="input" placeholder="Dịch Vọng" />
-                  {errors.shippingWard && <p className="text-red-500 text-xs mt-1">{errors.shippingWard.message}</p>}
-                </div>
+                
+                {/* Email field - especially for guest checkout */}
+                {!user && (
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email {!user && <span className="text-gray-500">(để nhận thông tin đơn hàng)</span>}
+                    </label>
+                    <input 
+                      {...register('guestEmail')} 
+                      type="email" 
+                      className="input" 
+                      placeholder="email@example.com" 
+                    />
+                    {errors.guestEmail && <p className="text-red-500 text-xs mt-1">{errors.guestEmail.message}</p>}
+                  </div>
+                )}
+                
+                {/* Address Form Component */}
+                <AddressForm register={register} errors={errors} setValue={setValue} watch={watch} />
+                
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ chi tiết *</label>
                   <input {...register('shippingAddress')} className="input" placeholder="Số nhà, tên đường..." />
@@ -301,7 +331,7 @@ export default function CheckoutPage() {
               </div>
               {voucherApplied && (
                 <p className="text-green-600 text-xs mt-2">
-                  ✓ Đã áp dụng: {isFreeShippingVoucher ? 'miễn phí vận chuyển' : `giảm ${formatPrice(voucherDiscount)}`}
+                  Đã áp dụng: {isFreeShippingVoucher ? 'miễn phí vận chuyển' : `giảm ${formatPrice(voucherDiscount)}`}
                 </p>
               )}
             </div>

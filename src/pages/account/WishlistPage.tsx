@@ -31,11 +31,17 @@ export default function WishlistPage() {
   const remove = useMutation({
     mutationFn: (productId: number) => api.post(`/wishlist/${productId}`),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['wishlist'] }); toast.success('Đã xóa khỏi yêu thích') },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Không thể xóa khỏi danh sách yêu thích!')
+    },
   })
 
   const addToCart = useMutation({
     mutationFn: (productId: number) => cartService.addItem(productId, 1),
     onSuccess: (res) => { if (res.data.data) setCart(res.data.data); toast.success('Đã thêm vào giỏ hàng') },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Không thể thêm vào giỏ hàng!')
+    },
   })
 
   return (

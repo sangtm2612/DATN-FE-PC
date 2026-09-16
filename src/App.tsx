@@ -1,5 +1,8 @@
 import { Routes, Route } from 'react-router-dom'
-import { Suspense, lazy } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
+import { useCartStore } from '@/store/cartStore'
+import { useAuthStore } from '@/store/authStore'
+import { cartService } from '@/services/cartService'
 import MainLayout from '@/layouts/MainLayout'
 import AdminLayout from '@/layouts/AdminLayout'
 import AuthLayout from '@/layouts/AuthLayout'
@@ -61,6 +64,26 @@ const AdminServiceRequests = lazy(() => import('@/pages/admin/ServiceRequestsPag
 const AdminReturnRequests = lazy(() => import('@/pages/admin/ReturnRequestsPage'))
 
 export default function App() {
+  const { setCart } = useCartStore()
+  const { isAuthenticated } = useAuthStore()
+
+  // Fetch cart khi app load (cho cả logged-in user và guest)
+  useEffect(() => {
+    const fetchCart = async () => {
+      try {
+        const response = await cartService.get()
+        if (response.data.data) {
+          setCart(response.data.data)
+        }
+      } catch (error) {
+        // Silent fail - cart will be empty on error
+        console.warn('Failed to fetch cart:', error)
+      }
+    }
+
+    fetchCart()
+  }, [isAuthenticated, setCart]) // Re-fetch khi login/logout
+
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
@@ -113,10 +136,12 @@ export default function App() {
           {/* Dev tools */}
           <Route path="/dev-mock-payment"      element={<DevMockPaymentPage />} />
 
+          {/* Public checkout - guest can checkout */}
+          <Route path="/checkout"              element={<CheckoutPage />} />
+          <Route path="/order-success/:code"   element={<OrderSuccess />} />
+
           {/* Protected */}
           <Route element={<ProtectedRoute />}>
-            <Route path="/checkout"              element={<CheckoutPage />} />
-            <Route path="/order-success/:code"   element={<OrderSuccess />} />
             <Route path="/account"               element={<AccountPage />}>
               <Route index                       element={<ProfilePage />} />
               <Route path="profile"             element={<ProfilePage />} />

@@ -32,7 +32,7 @@ export default function Pagination({ page, totalPages, onPageChange }: Props) {
 
       {pages.map((p, i) =>
         p === '...' ? (
-          <span key={`dots-${i}`} className="w-9 h-9 flex items-center justify-center text-gray-400">…</span>
+          <span key={`dots-${i}`} className="w-9 h-9 flex items-center justify-center text-gray-400">...</span>
         ) : (
           <button
             key={p}

@@ -100,7 +100,7 @@ export default function AdminCategoriesPage() {
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
             <div className="flex items-center justify-between px-6 py-4 border-b">
               <h3 className="font-bold text-lg">{editing ? 'Sửa danh mục' : 'Thêm danh mục'}</h3>
-              <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-700">✕</button>
+              <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-700">X</button>
             </div>
             <div className="p-6 space-y-4">
               {[

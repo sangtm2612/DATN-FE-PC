@@ -103,7 +103,7 @@ export default function OrderDetailPage() {
                   {item.productName}
                 </Link>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  x{item.quantity} • Bảo hành {item.warrantyMonths} tháng
+                  x{item.quantity} - Bảo hành {item.warrantyMonths} tháng
                 </p>
               </div>
               <p className="font-bold text-sm text-gray-800 flex-shrink-0">{formatPrice(item.totalPrice)}</p>

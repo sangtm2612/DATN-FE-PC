@@ -114,7 +114,7 @@ export default function Footer() {
       {/* Bottom */}
       <div className="border-t border-gray-800">
         <div className="container py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-500">
-          <p>© 2026 KinhDuanPC. Luận án tốt nghiệp — Website bán máy tính trực tuyến.</p>
+          <p>© 2026 KinhDuanPC. Luận án tốt nghiệp - Website bán máy tính trực tuyến.</p>
           <div className="flex gap-4">
             <a href="#" className="hover:text-white">Chính sách bảo mật</a>
             <a href="#" className="hover:text-white">Điều khoản sử dụng</a>

@@ -14,6 +14,9 @@ export default function ResetPasswordPage() {
   const reset = useMutation({
     mutationFn: () => authService.resetPassword(token, password),
     onSuccess: () => { toast.success('Đặt lại mật khẩu thành công!'); navigate('/login') },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Không thể đặt lại mật khẩu. Link có thể đã hết hạn!')
+    },
   })
 
   const handleSubmit = (e: React.FormEvent) => {

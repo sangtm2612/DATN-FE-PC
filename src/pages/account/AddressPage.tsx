@@ -69,7 +69,7 @@ export default function AddressPage() {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-semibold">{addr.fullName}</span>
-                    <span className="text-gray-500">•</span>
+                    <span className="text-gray-500">-</span>
                     <span className="text-gray-500">{addr.phone}</span>
                     {addr.isDefault && (
                       <span className="text-xs bg-primary-100 text-primary-600 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
@@ -109,7 +109,7 @@ export default function AddressPage() {
           <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
             <div className="flex items-center justify-between px-6 py-4 border-b">
               <h3 className="font-bold text-lg">{editing ? 'Sửa địa chỉ' : 'Thêm địa chỉ mới'}</h3>
-              <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-700">✕</button>
+              <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-700">X</button>
             </div>
             <div className="p-6 grid grid-cols-2 gap-4">
               {[

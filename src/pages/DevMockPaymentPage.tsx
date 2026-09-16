@@ -84,21 +84,21 @@ export default function DevMockPaymentPage() {
                   disabled={loading || !orderId}
                   className="btn-primary py-3"
                 >
-                  ✅ MoMo Success
+                  [OK] MoMo Success
                 </button>
                 <button
                   onClick={() => handleMockPayment('vnpay', 'success')}
                   disabled={loading || !orderId}
                   className="btn-primary py-3"
                 >
-                  ✅ VNPay Success
+                  [OK] VNPay Success
                 </button>
                 <button
                   onClick={() => handleMockPayment('zalopay', 'success')}
                   disabled={loading || !orderId}
                   className="btn-primary py-3"
                 >
-                  ✅ ZaloPay Success
+                  [OK] ZaloPay Success
                 </button>
               </div>
             </div>
@@ -114,28 +114,28 @@ export default function DevMockPaymentPage() {
                   disabled={loading || !orderId}
                   className="btn-outline py-3"
                 >
-                  ❌ MoMo Failed
+                  [FAIL] MoMo Failed
                 </button>
                 <button
                   onClick={() => handleMockPayment('vnpay', 'failed')}
                   disabled={loading || !orderId}
                   className="btn-outline py-3"
                 >
-                  ❌ VNPay Failed
+                  [FAIL] VNPay Failed
                 </button>
                 <button
                   onClick={() => handleMockPayment('zalopay', 'failed')}
                   disabled={loading || !orderId}
                   className="btn-outline py-3"
                 >
-                  ❌ ZaloPay Failed
+                  [FAIL] ZaloPay Failed
                 </button>
               </div>
             </div>
           </div>
 
           <div className="mt-8 p-4 bg-blue-50 rounded-lg">
-            <h4 className="font-semibold text-blue-900 mb-2">💡 Cách sử dụng:</h4>
+            <h4 className="font-semibold text-blue-900 mb-2">Cách sử dụng:</h4>
             <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
               <li>Tạo đơn hàng bình thường qua checkout</li>
               <li>Lấy Order ID (check database hoặc response)</li>
@@ -150,15 +150,15 @@ export default function DevMockPaymentPage() {
               onClick={() => navigate('/')}
               className="text-sm text-gray-600 hover:text-gray-900"
             >
-              ← Về trang chủ
+              &lt; Về trang chủ
             </button>
           </div>
         </div>
 
         <div className="mt-6 p-4 bg-gray-100 rounded-lg">
-          <h4 className="font-semibold mb-2">📝 Test Flow:</h4>
+          <h4 className="font-semibold mb-2">Test Flow:</h4>
           <div className="text-sm text-gray-700 space-y-1">
-            <p>1. Tạo đơn hàng → Chọn MoMo/VNPay</p>
+            <p>1. Tạo đơn hàng - Chọn MoMo/VNPay</p>
             <p>2. Vào <code className="bg-white px-2 py-0.5 rounded">/dev-mock-payment</code></p>
             <p>3. Mock thanh toán thành công/thất bại</p>
             <p>4. Kiểm tra order status trong database</p>
