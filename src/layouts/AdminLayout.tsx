@@ -3,7 +3,7 @@ import { useState } from 'react'
 import {
   LayoutDashboard, Package, ShoppingCart, Tag, Layers,
   Image, FileText, MapPin, Ticket, Percent, Warehouse, Wrench, Undo2, LogOut, Menu, X,
-  ChevronRight, Bell
+  ChevronRight, Bell, Shield
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import toast from 'react-hot-toast'
@@ -15,6 +15,7 @@ const navItems = [
   { to: '/admin/categories', label: 'Danh mục',     icon: Layers,          roles: ['admin', 'staff'] },
   { to: '/admin/brands',     label: 'Thương hiệu',  icon: Tag,             roles: ['admin', 'staff'] },
   { to: '/admin/vouchers',   label: 'Voucher',      icon: Ticket,          roles: ['admin', 'staff'] },
+  { to: '/admin/voucher-policies', label: 'Chính sách voucher', icon: Shield, roles: ['admin'] },
   { to: '/admin/promotions', label: 'Khuyến mãi',   icon: Percent,         roles: ['admin', 'staff'] },
   { to: '/admin/banners',    label: 'Banner',       icon: Image,           roles: ['admin', 'staff'] },
   { to: '/admin/blog',       label: 'Blog',         icon: FileText,        roles: ['admin', 'staff'] },

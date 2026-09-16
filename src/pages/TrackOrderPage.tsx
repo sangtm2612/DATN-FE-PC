@@ -109,10 +109,11 @@ export default function TrackOrderPage() {
               <p className="text-sm text-gray-500">{order.shippingAddress}, {order.shippingWard}, {order.shippingProvince}</p>
             </div>
             <div className="card p-5">
-              <h3 className="font-semibold mb-3">Thanh toán</h3>
-              <p className="text-sm">{PAYMENT_METHOD_LABEL[order.paymentMethod]}</p>
-              <p className="text-sm text-gray-500">Đặt ngày: {formatDate(order.createdAt)}</p>
-              <p className="text-lg font-bold text-primary-500 mt-2">{formatPrice(order.totalAmount)}</p>
+              <h3 className="font-semibold mb-3">Thông tin thanh toán</h3>
+              <p className="text-sm text-gray-600">Phương thức:</p>
+              <p className="text-sm font-medium mb-2">{PAYMENT_METHOD_LABEL[order.paymentMethod]}</p>
+              <p className="text-sm text-gray-600">Thời gian đặt hàng:</p>
+              <p className="text-sm font-medium">{formatDate(order.createdAt)}</p>
             </div>
           </div>
 
@@ -131,6 +132,31 @@ export default function TrackOrderPage() {
                   <p className="font-semibold text-sm">{formatPrice(item.totalPrice)}</p>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Order Summary */}
+          <div className="card p-5">
+            <h3 className="font-semibold mb-4">Chi tiết thanh toán</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Tạm tính:</span>
+                <span className="font-medium">{formatPrice(order.subtotal)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Phí vận chuyển:</span>
+                <span className="font-medium">{formatPrice(order.shippingFee)}</span>
+              </div>
+              {order.discountAmount > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-green-600">Giảm giá:</span>
+                  <span className="font-medium text-green-600">-{formatPrice(order.discountAmount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between pt-3 border-t border-gray-200">
+                <span className="font-semibold text-base">Tổng thanh toán:</span>
+                <span className="font-bold text-lg text-primary-500">{formatPrice(order.totalAmount)}</span>
+              </div>
             </div>
           </div>
         </div>

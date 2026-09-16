@@ -143,6 +143,10 @@ export interface Order {
   status: OrderStatus
   paymentMethod: PaymentMethod
   paymentStatus: string
+  userId?: number
+  customerName?: string
+  customerEmail?: string
+  customerPhone?: string
   shippingName: string
   shippingPhone: string
   shippingProvince: string
@@ -153,8 +157,10 @@ export interface Order {
   shippingFee: number
   discountAmount: number
   totalAmount: number
+  refundAmount?: number
   voucherCode?: string
   note?: string
+  staffNote?: string
   cancelledReason?: string
   buildId?: number
   buildName?: string

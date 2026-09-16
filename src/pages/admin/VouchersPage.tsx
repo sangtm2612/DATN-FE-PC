@@ -8,7 +8,7 @@ import toast from 'react-hot-toast'
 export default function AdminVouchersPage() {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({
-    code: '', name: '', discountType: 'percent', discountValue: 0,
+    code: '', name: '', voucherType: 'PUBLIC', discountType: 'percent', discountValue: 0,
     minOrderValue: 0, maxDiscount: '', usageLimit: '', usagePerUser: 1,
     startDate: '', endDate: '', isActive: true
   })
@@ -60,9 +60,15 @@ export default function AdminVouchersPage() {
               <p>Đã dùng: {v.usedCount}{v.usageLimit ? `/${v.usageLimit}` : ''}</p>
               <p>Hết hạn: {formatDate(v.endDate, 'DD/MM/YYYY')}</p>
             </div>
-            <div className={`mt-3 text-xs px-2 py-0.5 rounded-full inline-block font-medium
-              ${v.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-              {v.isActive ? 'Đang hoạt động' : 'Vô hiệu'}
+            <div className="mt-3 flex gap-2">
+              <span className={`text-xs px-2 py-0.5 rounded-full inline-block font-medium
+                ${v.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                {v.isActive ? 'Đang hoạt động' : 'Vô hiệu'}
+              </span>
+              <span className={`text-xs px-2 py-0.5 rounded-full inline-block font-medium
+                ${v.voucherType === 'PERSONAL' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                {v.voucherType}
+              </span>
             </div>
           </div>
         ))}
@@ -90,6 +96,13 @@ export default function AdminVouchersPage() {
               <div>
                 <label className="block text-sm font-medium mb-1">Tên mô tả</label>
                 <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} className="input" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Loại voucher</label>
+                <select value={form.voucherType} onChange={e=>setForm(f=>({...f,voucherType:e.target.value}))} className="input">
+                  <option value="PUBLIC">PUBLIC — Ai biết mã đều dùng được</option>
+                  <option value="PERSONAL">PERSONAL — Chỉ user được phân phối</option>
+                </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

@@ -45,6 +45,7 @@ const OrderDetailPage   = lazy(() => import('@/pages/account/OrderDetailPage'))
 const WishlistPage      = lazy(() => import('@/pages/account/WishlistPage'))
 const MyWarrantyPage    = lazy(() => import('@/pages/account/MyWarrantyPage'))
 const MyBuildsPage      = lazy(() => import('@/pages/account/MyBuildsPage'))
+const MyVouchersPage    = lazy(() => import('@/pages/account/MyVouchersPage'))
 const ReturnRequestPage = lazy(() => import('@/pages/account/ReturnRequestPage'))
 
 // Admin
@@ -58,6 +59,7 @@ const AdminBlog         = lazy(() => import('@/pages/admin/BlogPage'))
 const AdminBlogEditor   = lazy(() => import('@/pages/admin/BlogEditorPage'))
 const AdminStores       = lazy(() => import('@/pages/admin/StoresPage'))
 const AdminVouchers     = lazy(() => import('@/pages/admin/VouchersPage'))
+const AdminVoucherPolicies = lazy(() => import('@/pages/admin/VoucherPoliciesPage'))
 const AdminPromotions   = lazy(() => import('@/pages/admin/PromotionsPage'))
 const AdminStoreStock   = lazy(() => import('@/pages/admin/StoreStockPage'))
 const AdminServiceRequests = lazy(() => import('@/pages/admin/ServiceRequestsPage'))
@@ -109,6 +111,7 @@ export default function App() {
             <Route path="/admin/blog/edit/:id"   element={<AdminBlogEditor />} />
             <Route path="/admin/stores"          element={<AdminStores />} />
             <Route path="/admin/vouchers"        element={<AdminVouchers />} />
+            <Route path="/admin/voucher-policies" element={<AdminVoucherPolicies />} />
             <Route path="/admin/promotions"      element={<AdminPromotions />} />
             <Route path="/admin/store-stock"     element={<AdminStoreStock />} />
             <Route path="/admin/service-requests" element={<AdminServiceRequests />} />
@@ -150,6 +153,7 @@ export default function App() {
               <Route path="orders/:id"          element={<OrderDetailPage />} />
               <Route path="orders/:id/return"   element={<ReturnRequestPage />} />
               <Route path="wishlist"            element={<WishlistPage />} />
+              <Route path="vouchers"            element={<MyVouchersPage />} />
               <Route path="warranties"          element={<MyWarrantyPage />} />
               <Route path="builds"              element={<MyBuildsPage />} />
             </Route>
