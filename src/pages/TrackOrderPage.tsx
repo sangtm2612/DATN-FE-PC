@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, Link } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { orderService } from '@/services/orderService'
 import { formatPrice, formatDate, ORDER_STATUS_LABEL, PAYMENT_METHOD_LABEL } from '@/lib/utils'
 import type { Order } from '@/types'
-import { Search, Package } from 'lucide-react'
+import { Search, Package, CreditCard } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function TrackOrderPage() {
   const [searchParams] = useSearchParams()
-  const [orderCode, setOrderCode] = useState(searchParams.get('code') || '')
+  const [orderCode, setOrderCode] = useState(
+    searchParams.get('code') || searchParams.get('orderCode') || ''
+  )
   const [phone, setPhone] = useState(searchParams.get('phone') || '')
 
   const track = useMutation({
@@ -21,7 +23,7 @@ export default function TrackOrderPage() {
 
   // Auto-submit if both parameters are present in URL
   useEffect(() => {
-    const code = searchParams.get('code')
+    const code = searchParams.get('code') || searchParams.get('orderCode')
     const phoneParam = searchParams.get('phone')
     if (code && phoneParam) {
       track.mutate()
@@ -69,6 +71,25 @@ export default function TrackOrderPage() {
 
       {order && (
         <div className="space-y-4">
+          {/* Deposit payment banner */}
+          {order.status === 'pending_deposit' && !order.depositPaid && (
+            <div className="bg-orange-50 border-2 border-orange-400 rounded-lg p-5">
+              <h3 className="font-bold text-orange-700 mb-1 flex items-center gap-2">
+                <CreditCard size={18} /> Cần thanh toán cọc
+              </h3>
+              <p className="text-sm text-orange-600 mb-3">
+                Đơn hàng đang chờ bạn thanh toán cọc <strong>{formatPrice(order.depositAmount)}</strong>.
+                Vui lòng thanh toán để xác nhận đơn hàng.
+              </p>
+              <Link
+                to={`/thanh-toan-coc?orderCode=${order.orderCode}&phone=${encodeURIComponent(phone)}`}
+                className="inline-block bg-orange-500 text-white px-5 py-2 rounded-lg font-semibold text-sm hover:bg-orange-600 transition"
+              >
+                Thanh toán cọc ngay
+              </Link>
+            </div>
+          )}
+
           {/* Status */}
           <div className="card p-6">
             <div className="flex items-center justify-between mb-4">
@@ -157,6 +178,24 @@ export default function TrackOrderPage() {
                 <span className="font-semibold text-base">Tổng thanh toán:</span>
                 <span className="font-bold text-lg text-primary-500">{formatPrice(order.totalAmount)}</span>
               </div>
+              {order.depositAmount != null && order.depositAmount > 0 && (
+                <div className="border-t border-dashed border-gray-200 pt-3 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className={order.depositPaid ? 'text-green-600' : 'text-orange-600'}>
+                      {order.depositPaid ? 'Đã cọc:' : 'Tiền cọc cần trả:'}
+                    </span>
+                    <span className={`font-semibold ${order.depositPaid ? 'text-green-600' : 'text-orange-600'}`}>
+                      {formatPrice(order.depositAmount)}
+                    </span>
+                  </div>
+                  {order.remainingAmount != null && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Còn lại khi nhận hàng:</span>
+                      <span className="font-medium">{formatPrice(order.remainingAmount)}</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

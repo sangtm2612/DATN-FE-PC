@@ -8,12 +8,13 @@ import { Package, ChevronRight } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const STATUS_TABS = [
-  { value: '',           label: 'Tất cả' },
-  { value: 'pending',    label: 'Chờ xác nhận' },
-  { value: 'confirmed',  label: 'Đã xác nhận' },
-  { value: 'shipping',   label: 'Đang giao' },
-  { value: 'completed',  label: 'Hoàn thành' },
-  { value: 'cancelled',  label: 'Đã hủy' },
+  { value: '',                label: 'Tất cả' },
+  { value: 'pending_deposit', label: 'Chờ đặt cọc' },
+  { value: 'pending',         label: 'Chờ xác nhận' },
+  { value: 'confirmed',       label: 'Đã xác nhận' },
+  { value: 'shipping',        label: 'Đang giao' },
+  { value: 'completed',       label: 'Hoàn thành' },
+  { value: 'cancelled',       label: 'Đã hủy' },
 ]
 
 export default function OrderHistoryPage() {
@@ -87,9 +88,19 @@ export default function OrderHistoryPage() {
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-primary-500">{formatPrice(order.totalAmount)}</span>
+                  <div>
+                    <span className="font-bold text-primary-500">{formatPrice(order.totalAmount)}</span>
+                    {(order.depositAmount ?? 0) > 0 && (
+                      <p className="text-xs mt-0.5 text-gray-500">
+                        <span className={order.depositPaid ? 'text-green-600 font-medium' : 'text-orange-500 font-medium'}>
+                          {order.depositPaid ? 'Đã cọc' : 'Cọc'}: {formatPrice(order.depositAmount!)}
+                        </span>
+                        {' · '}Còn lại: {formatPrice(order.remainingAmount ?? 0)}
+                      </p>
+                    )}
+                  </div>
                   <div className="flex gap-2">
-                    {order.status === 'pending' && (
+                    {(order.status === 'pending' || order.status === 'pending_deposit') && (
                       <button
                         onClick={() => cancelOrder.mutate(order.id)}
                         className="text-xs text-red-500 border border-red-300 px-3 py-1.5 rounded-lg hover:bg-red-50"

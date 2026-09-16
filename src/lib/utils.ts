@@ -33,6 +33,7 @@ export function getOrCreateSessionId(): string {
 
 /** Map order status sang tiếng Việt */
 export const ORDER_STATUS_LABEL: Record<string, { label: string; color: string }> = {
+  pending_deposit: { label: 'Chờ đặt cọc',  color: 'text-orange-600 bg-orange-50 border-orange-200' },
   pending:    { label: 'Chờ xác nhận', color: 'text-yellow-600 bg-yellow-50 border-yellow-200' },
   confirmed:  { label: 'Đã xác nhận',  color: 'text-blue-600 bg-blue-50 border-blue-200' },
   processing: { label: 'Đang xử lý',   color: 'text-indigo-600 bg-indigo-50 border-indigo-200' },

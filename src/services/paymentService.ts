@@ -10,14 +10,19 @@ export interface PaymentResponse {
 
 /**
  * Tạo URL thanh toán VNPay
+ * @param orderId - ID đơn hàng
+ * @param amount - Số tiền thanh toán (tùy chọn, để trống = thanh toán toàn bộ)
  */
-export const createVNPayPayment = async (orderId: number): Promise<string> => {
+export const createVNPayPayment = async (orderId: number, amount?: number): Promise<string> => {
+  const params: any = { orderId };
+  if (amount !== undefined) {
+    params.amount = amount;
+  }
+  
   const response = await api.post<PaymentResponse>(
     '/payments/vnpay/create',
     null,
-    {
-      params: { orderId },
-    }
+    { params }
   );
 
   if (response.data.success) {
@@ -48,14 +53,19 @@ export const createMoMoPayment = async (orderId: number): Promise<string> => {
 
 /**
  * Tạo URL thanh toán ZaloPay
+ * @param orderId - ID đơn hàng
+ * @param amount - Số tiền thanh toán (tùy chọn, để trống = thanh toán toàn bộ)
  */
-export const createZaloPayPayment = async (orderId: number): Promise<string> => {
+export const createZaloPayPayment = async (orderId: number, amount?: number): Promise<string> => {
+  const params: any = { orderId };
+  if (amount !== undefined) {
+    params.amount = amount;
+  }
+  
   const response = await api.post<PaymentResponse>(
     '/payments/zalopay/create',
     null,
-    {
-      params: { orderId },
-    }
+    { params }
   );
 
   if (response.data.success) {

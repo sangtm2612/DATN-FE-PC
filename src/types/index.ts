@@ -118,7 +118,7 @@ export interface Cart {
 
 // Order
 export type OrderStatus =
-  | 'pending' | 'confirmed' | 'processing'
+  | 'pending_deposit' | 'pending' | 'confirmed' | 'processing'
   | 'shipping' | 'delivered' | 'completed'
   | 'cancelled' | 'refunded'
 
@@ -157,6 +157,9 @@ export interface Order {
   shippingFee: number
   discountAmount: number
   totalAmount: number
+  depositAmount?: number
+  depositPaid?: boolean
+  remainingAmount?: number
   refundAmount?: number
   voucherCode?: string
   note?: string

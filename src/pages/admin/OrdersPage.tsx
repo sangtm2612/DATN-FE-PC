@@ -8,7 +8,7 @@ import toast from 'react-hot-toast'
 import {
   Eye, Search, X, Package, MapPin, CreditCard, Clock,
   Phone, Mail, User, FileText, Truck, CheckCircle, AlertCircle,
-  ArrowRight, ShieldCheck
+  ArrowRight, ShieldCheck, ListChecks
 } from 'lucide-react'
 import type { OrderHistoryEntry } from '@/types'
 
@@ -28,6 +28,8 @@ export default function AdminOrdersPage() {
   const [searchInput, setSearchInput] = useState('')
   const [page, setPage] = useState(0)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [checkedIds, setCheckedIds] = useState<Set<number>>(new Set())
+  const [batchStatus, setBatchStatus] = useState('confirmed')
   const qc = useQueryClient()
   const debounce = useDebounce(400)
 
@@ -52,14 +54,45 @@ export default function AdminOrdersPage() {
     },
   })
 
+  const batchUpdate = useMutation({
+    mutationFn: (payload: { ids: number[]; status: string }) =>
+      api.put('/orders/batch-status', payload).then(r => r.data),
+    onSuccess: (data: any) => {
+      const res = data?.data
+      toast.success(`Đã cập nhật ${res?.updated ?? 0} đơn${res?.failed ? `, ${res.failed} lỗi` : ''}`)
+      setCheckedIds(new Set())
+      qc.invalidateQueries({ queryKey: ['admin-orders'] })
+    },
+    onError: () => toast.error('Batch update thất bại'),
+  })
+
+  const toggleCheck = (id: number) => {
+    setCheckedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  const toggleAll = () => {
+    const status = activeStatus ?? orders[0]?.status
+    const eligible = status ? orders.filter(o => o.status === status) : orders
+    const allChecked = eligible.length > 0 && eligible.every(o => checkedIds.has(o.id))
+    setCheckedIds(allChecked ? new Set() : new Set(eligible.map(o => o.id)))
+  }
+
   const orders: Order[] = data?.data || []
   const pagination = data?.pagination
+  const activeStatus = checkedIds.size > 0
+    ? orders.find(o => checkedIds.has(o.id))?.status
+    : undefined
 
   const handleSearch = (value: string) => {
     setSearchInput(value)
     debounce(() => {
       setKeyword(value.trim())
       setPage(0)
+      setCheckedIds(new Set())
     })
   }
 
@@ -89,7 +122,7 @@ export default function AdminOrdersPage() {
             </button>
           )}
         </div>
-        <select value={status} onChange={e => { setStatus(e.target.value); setPage(0) }}
+        <select value={status} onChange={e => { setStatus(e.target.value); setPage(0); setCheckedIds(new Set()) }}
           className="border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-500 min-w-[160px]">
           <option value="">Tất cả trạng thái</option>
           {STATUS_OPTS.slice(1).map(s => (
@@ -98,27 +131,116 @@ export default function AdminOrdersPage() {
         </select>
       </div>
 
+      {/* Batch action bar */}
+      {checkedIds.size > 0 && (
+        <div className="flex items-center gap-3 mb-3 px-4 py-3 bg-primary-50 border border-primary-200 rounded-lg">
+          <ListChecks size={18} className="text-primary-600 flex-shrink-0" />
+          <span className="text-sm font-semibold text-primary-700">Đã chọn {checkedIds.size} đơn</span>
+          {(() => {
+            const activeStatus = orders.find(o => checkedIds.has(o.id))?.status
+            return activeStatus ? (
+              <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${ORDER_STATUS_LABEL[activeStatus]?.color}`}>
+                {ORDER_STATUS_LABEL[activeStatus]?.label}
+              </span>
+            ) : null
+          })()}
+          <div className="flex items-center gap-2 ml-auto">
+            <span className="text-sm text-gray-600">Chuyển sang:</span>
+            <select
+              value={batchStatus}
+              onChange={e => setBatchStatus(e.target.value)}
+              className="border rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-primary-500"
+            >
+              {STATUS_OPTS.slice(1).map(s => (
+                <option key={s} value={s}>{ORDER_STATUS_LABEL[s]?.label}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => batchUpdate.mutate({ ids: Array.from(checkedIds), status: batchStatus })}
+              disabled={batchUpdate.isPending}
+              className="bg-primary-500 hover:bg-primary-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-60"
+            >
+              {batchUpdate.isPending ? 'Đang cập nhật...' : 'Cập nhật'}
+            </button>
+            <button
+              onClick={() => setCheckedIds(new Set())}
+              className="text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg text-sm border"
+            >
+              Bỏ chọn
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="card overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b">
             <tr>
+              <th className="px-4 py-3 w-10">
+                {(() => {
+                  const activeStatus = checkedIds.size > 0
+                    ? orders.find(o => checkedIds.has(o.id))?.status
+                    : orders[0]?.status
+                  const eligible = activeStatus ? orders.filter(o => o.status === activeStatus) : orders
+                  const allChecked = eligible.length > 0 && eligible.every(o => checkedIds.has(o.id))
+                  const someChecked = checkedIds.size > 0 && !allChecked
+                  return (
+                    <input type="checkbox"
+                      checked={allChecked}
+                      ref={el => { if (el) el.indeterminate = someChecked }}
+                      onChange={toggleAll}
+                      className="rounded border-gray-300 text-primary-500 cursor-pointer"
+                    />
+                  )
+                })()}
+              </th>
               {['Mã đơn', 'Khách hàng', 'Tổng tiền', 'Thanh toán', 'Trạng thái', 'Ngày đặt', ''].map(h => (
                 <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody className="divide-y">
-            {orders.map(order => (
-              <tr key={order.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedOrder(order)}>
+            {orders.map(order => {
+              const isDisabled = !!activeStatus && order.status !== activeStatus
+              return (
+              <tr key={order.id}
+                className={`cursor-pointer transition-colors
+                  ${isDisabled ? 'bg-gray-100 opacity-50 pointer-events-none' : checkedIds.has(order.id) ? 'bg-primary-50' : 'hover:bg-gray-50'}`}
+                onClick={() => !isDisabled && setSelectedOrder(order)}
+              >
+                <td className="px-4 py-3 w-10" onClick={e => e.stopPropagation()}>
+                  <input type="checkbox" checked={checkedIds.has(order.id)}
+                    onChange={() => !isDisabled && toggleCheck(order.id)}
+                    disabled={isDisabled}
+                    className="rounded border-gray-300 text-primary-500 cursor-pointer disabled:cursor-not-allowed" />
+                </td>
                 <td className="px-4 py-3 font-mono font-medium text-primary-600">{order.orderCode}</td>
                 <td className="px-4 py-3">
                   <p className="font-medium">{order.customerName || order.shippingName}</p>
                   <p className="text-gray-400 text-xs">{order.customerPhone || order.shippingPhone}</p>
                 </td>
-                <td className="px-4 py-3 font-semibold">{formatPrice(order.totalAmount)}</td>
                 <td className="px-4 py-3">
-                  <span className="text-xs">{PAYMENT_METHOD_LABEL[order.paymentMethod] || order.paymentMethod}</span>
+                  <span className="font-semibold">{formatPrice(order.totalAmount)}</span>
+                  {(order.depositAmount ?? 0) > 0 && (
+                    <p className="text-xs mt-0.5">
+                      <span className={order.depositPaid ? 'text-green-600' : 'text-orange-500'}>
+                        {order.depositPaid ? 'Cọc: ' : 'Cọc cần: '}{formatPrice(order.depositAmount!)}
+                      </span>
+                    </p>
+                  )}
+                </td>
+                <td className="px-4 py-3">
+                  <p className="text-xs">{PAYMENT_METHOD_LABEL[order.paymentMethod] || order.paymentMethod}</p>
+                  <span className={`text-xs font-medium ${
+                    order.paymentStatus === 'paid' ? 'text-green-600' :
+                    order.paymentStatus === 'failed' ? 'text-red-500' :
+                    'text-yellow-600'
+                  }`}>
+                    {order.paymentStatus === 'paid' ? 'Đã TT' :
+                     order.paymentStatus === 'failed' ? 'Thất bại' :
+                     order.paymentStatus === 'refunded' ? 'Hoàn tiền' : 'Chờ TT'}
+                  </span>
                 </td>
                 <td className="px-4 py-3">
                   <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${ORDER_STATUS_LABEL[order.status]?.color}`}>
@@ -133,7 +255,8 @@ export default function AdminOrdersPage() {
                   </button>
                 </td>
               </tr>
-            ))}
+              )
+            })}
           </tbody>
         </table>
 
@@ -312,6 +435,23 @@ function OrderDetailModal({ order, onClose, onUpdateStatus, isUpdating }: {
               <div className="flex justify-between font-bold text-base">
                 <span>Tổng cộng</span><span className="text-primary-600">{formatPrice(o.totalAmount)}</span>
               </div>
+              {(o.depositAmount ?? 0) > 0 && (
+                <>
+                  <hr className="border-dashed" />
+                  <div className="flex justify-between">
+                    <span className={o.depositPaid ? 'text-green-600' : 'text-orange-600'}>
+                      {o.depositPaid ? 'Đã cọc' : 'Cọc cần trả'}
+                    </span>
+                    <span className={`font-semibold ${o.depositPaid ? 'text-green-600' : 'text-orange-600'}`}>
+                      {formatPrice(o.depositAmount!)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-gray-500">
+                    <span>Còn lại khi nhận hàng</span>
+                    <span>{formatPrice(o.remainingAmount ?? 0)}</span>
+                  </div>
+                </>
+              )}
             </div>
           </section>
 

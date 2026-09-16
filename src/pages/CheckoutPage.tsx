@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -8,12 +8,13 @@ import { useCartStore } from '@/store/cartStore'
 import { useAuthStore } from '@/store/authStore'
 import { orderService, type CreateOrderPayload } from '@/services/orderService'
 import { createVNPayPayment, createMoMoPayment, createZaloPayPayment } from '@/services/paymentService'
+import { getOrderConfig } from '@/services/configService'
 import { formatPrice, getOrCreateSessionId } from '@/lib/utils'
 import { PAYMENT_METHOD_LABEL } from '@/lib/utils'
 import api from '@/lib/axios'
 import toast from 'react-hot-toast'
 import type { ShippingMethod, Store } from '@/types'
-import { CreditCard, Banknote, Smartphone, Tag, Truck, Store as StoreIcon } from 'lucide-react'
+import { CreditCard, Banknote, Smartphone, Tag, Truck } from 'lucide-react'
 import AddressForm from '@/components/checkout/AddressForm'
 
 const schema = z.object({
@@ -30,9 +31,9 @@ type FormData = z.infer<typeof schema>
 
 const PAYMENT_METHODS = [
   { value: 'cod',           label: 'Tiền mặt (COD)',       icon: Banknote },
-  { value: 'bank_transfer', label: 'Chuyển khoản',         icon: CreditCard },
+  // { value: 'bank_transfer', label: 'Chuyển khoản',         icon: CreditCard }, // Ẩn tạm thời
   { value: 'vnpay',         label: 'VNPay',                icon: Smartphone },
-  { value: 'momo',          label: 'MoMo',                 icon: Smartphone },
+  // { value: 'momo',          label: 'MoMo',                 icon: Smartphone }, // Ẩn tạm thời
   { value: 'zalopay',       label: 'ZaloPay',              icon: Smartphone },
 ]
 
@@ -43,7 +44,18 @@ export default function CheckoutPage() {
   const [searchParams] = useSearchParams()
   const buildId = searchParams.get('buildId')
   const [paymentMethod, setPaymentMethod] = useState('cod')
+  const [depositPaymentMethod, setDepositPaymentMethod] = useState<'vnpay' | 'zalopay'>('vnpay')
   const [voucherCode, setVoucherCode] = useState('')
+  const isSubmittingRef = useRef(false) // Prevent double submission
+  
+  // Lấy config từ backend
+  const { data: orderConfig } = useQuery({
+    queryKey: ['orderConfig'],
+    queryFn: getOrderConfig,
+    staleTime: 5 * 60 * 1000, // Cache 5 phút
+  })
+  
+  const COD_DEPOSIT_FEE = orderConfig?.codDepositAmount || 100_000 // Fallback to 100k
   const [voucherApplied, setVoucherApplied] = useState<any>(null)
   const [shippingMethodId, setShippingMethodId] = useState<number | null>(null)
   const [deliveryMode, setDeliveryMode] = useState<'ship' | 'pickup'>('ship')
@@ -71,10 +83,11 @@ export default function CheckoutPage() {
     },
   ]
 
-  const { data: stores } = useQuery({
-    queryKey: ['stores'],
-    queryFn: () => api.get<{ data: Store[] }>('/stores').then(r => r.data.data || []),
-  })
+  // Tạm thời ẩn tính năng pickup tại showroom
+  // const { data: stores } = useQuery({
+  //   queryKey: ['stores'],
+  //   queryFn: () => api.get<{ data: Store[] }>('/stores').then(r => r.data.data || []),
+  // })
 
   useEffect(() => {
     if (shippingMethods?.length && shippingMethodId === null) {
@@ -82,11 +95,12 @@ export default function CheckoutPage() {
     }
   }, [shippingMethodId])
 
-  useEffect(() => {
-    if (deliveryMode === 'pickup' && stores?.length && pickupStoreId === null) {
-      setPickupStoreId(stores[0].id)
-    }
-  }, [deliveryMode, stores, pickupStoreId])
+  // Tạm thời ẩn tính năng pickup tại showroom
+  // useEffect(() => {
+  //   if (deliveryMode === 'pickup' && stores?.length && pickupStoreId === null) {
+  //     setPickupStoreId(stores[0].id)
+  //   }
+  // }, [deliveryMode, stores, pickupStoreId])
 
   const isFreeShippingVoucher = voucherApplied?.discountType === 'free_shipping'
   const selectedMethod = shippingMethods?.find(m => m.id === shippingMethodId)
@@ -122,62 +136,79 @@ export default function CheckoutPage() {
     onSuccess: async (res) => {
       const order = res.data.data
       
-      // Clear cart sau khi đặt hàng thành công
-      setCart({ items: [], totalItems: 0, totalAmount: 0 })
+      // KHÔNG clear cart ngay - sẽ clear sau khi redirect hoặc khi callback thành công
+      // setCart({ items: [], totalItems: 0, totalAmount: 0 })
       
-      // Kiểm tra payment method
-      if (paymentMethod === 'vnpay') {
+      // Nếu chọn COD: Phải thanh toán cọc 100k qua ví điện tử
+      if (paymentMethod === 'cod') {
         try {
-          // Gọi API tạo VNPay payment URL
+          let paymentUrl: string
+          
+          if (depositPaymentMethod === 'vnpay') {
+            // Gọi API tạo VNPay payment với số tiền cọc
+            paymentUrl = await createVNPayPayment(order.id, COD_DEPOSIT_FEE)
+            toast.success('Đang chuyển đến trang thanh toán cọc VNPay...')
+          } else {
+            // Gọi API tạo ZaloPay payment với số tiền cọc
+            paymentUrl = await createZaloPayPayment(order.id, COD_DEPOSIT_FEE)
+            toast.success('Đang chuyển đến ví ZaloPay để thanh toán cọc...')
+          }
+          
+          // Clear cart TRƯỚC KHI redirect
+          setCart({ items: [], totalItems: 0, totalAmount: 0 })
+          
+          // Redirect to payment gateway
+          window.location.href = paymentUrl
+        } catch (error: any) {
+          toast.error(
+            'Không thể khởi tạo thanh toán cọc. Đơn hàng sẽ tự động hủy sau 15 phút nếu không thanh toán.',
+            { duration: 6000 }
+          )
+          console.error('Deposit payment error:', error)
+          // Đơn đang ở pending_deposit — điều hướng tới trang tra cứu đơn hàng thay vì trang success
+          navigate(`/tra-don-hang?orderCode=${order?.orderCode}&phone=${encodeURIComponent(order?.shippingPhone || '')}`)
+        }
+      }
+      // Nếu chọn VNPay: Thanh toán toàn bộ
+      else if (paymentMethod === 'vnpay') {
+        try {
           const paymentUrl = await createVNPayPayment(order.id)
           toast.success('Đang chuyển đến trang thanh toán VNPay...')
           
-          // Redirect to VNPay
+          // Clear cart TRƯỚC KHI redirect
+          setCart({ items: [], totalItems: 0, totalAmount: 0 })
+          
           window.location.href = paymentUrl
         } catch (error: any) {
           toast.error(error.message || 'Không thể tạo thanh toán VNPay')
           console.error('VNPay payment error:', error)
-          
-          // Fallback - vẫn redirect về order success
           navigate(`/order-success/${order?.orderCode}`)
         }
-      } else if (paymentMethod === 'momo') {
+      }
+      // Nếu chọn ZaloPay: Thanh toán toàn bộ
+      else if (paymentMethod === 'zalopay') {
         try {
-          // Gọi API tạo MoMo payment URL
-          const paymentUrl = await createMoMoPayment(order.id)
-          toast.success('Đang chuyển đến ví MoMo...')
-          
-          // Redirect to MoMo
-          window.location.href = paymentUrl
-        } catch (error: any) {
-          toast.error(error.message || 'Không thể tạo thanh toán MoMo')
-          console.error('MoMo payment error:', error)
-          
-          // Fallback
-          navigate(`/order-success/${order?.orderCode}`)
-        }
-      } else if (paymentMethod === 'zalopay') {
-        try {
-          // Gọi API tạo ZaloPay payment URL
           const paymentUrl = await createZaloPayPayment(order.id)
           toast.success('Đang chuyển đến ví ZaloPay...')
           
-          // Redirect to ZaloPay
+          // Clear cart TRƯỚC KHI redirect
+          setCart({ items: [], totalItems: 0, totalAmount: 0 })
+          
           window.location.href = paymentUrl
         } catch (error: any) {
           toast.error(error.message || 'Không thể tạo thanh toán ZaloPay')
           console.error('ZaloPay payment error:', error)
-          
-          // Fallback
           navigate(`/order-success/${order?.orderCode}`)
         }
       } else {
-        // COD hoặc bank_transfer
+        // Các phương thức khác (nếu có)
+        setCart({ items: [], totalItems: 0, totalAmount: 0 })
         toast.success('Đặt hàng thành công!')
         navigate(`/order-success/${order?.orderCode}`)
       }
     },
     onError: (error: any) => {
+      isSubmittingRef.current = false // Reset flag on error
       toast.error(error.response?.data?.message || 'Đặt hàng thất bại')
     }
   })
@@ -193,6 +224,13 @@ export default function CheckoutPage() {
   const total = cart.totalAmount + shippingFee - discount
 
   const onSubmit = (formData: FormData) => {
+    // Prevent double submission
+    if (isSubmittingRef.current) {
+      console.warn('Already submitting, ignoring duplicate request')
+      return
+    }
+    
+    isSubmittingRef.current = true
     const sessionId = getOrCreateSessionId()
     createOrder.mutate({
       ...formData,
@@ -286,6 +324,53 @@ export default function CheckoutPage() {
                   </label>
                 ))}
               </div>
+              
+              {/* Hiển thị form chọn phương thức thanh toán cọc khi chọn COD */}
+              {paymentMethod === 'cod' && (
+                <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-sm font-semibold text-amber-800 mb-3">
+                    ⚠️ Yêu cầu cọc trước {formatPrice(COD_DEPOSIT_FEE)}
+                  </p>
+                  <p className="text-xs text-amber-700 mb-3">
+                    Bạn cần thanh toán cọc trước để xác nhận đơn hàng. Phần còn lại sẽ thanh toán khi nhận hàng.
+                  </p>
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-gray-700">Chọn phương thức thanh toán cọc:</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label
+                        className={`flex items-center justify-center gap-2 p-3 border-2 rounded-lg cursor-pointer transition-colors
+                          ${depositPaymentMethod === 'vnpay' ? 'border-primary-500 bg-white' : 'border-gray-200 hover:border-gray-300 bg-white'}`}
+                      >
+                        <input 
+                          type="radio" 
+                          name="depositPayment" 
+                          value="vnpay"
+                          checked={depositPaymentMethod === 'vnpay'}
+                          onChange={() => setDepositPaymentMethod('vnpay')}
+                          className="sr-only"
+                        />
+                        <Smartphone size={16} className={depositPaymentMethod === 'vnpay' ? 'text-primary-500' : 'text-gray-400'} />
+                        <span className="text-sm font-medium">VNPay</span>
+                      </label>
+                      <label
+                        className={`flex items-center justify-center gap-2 p-3 border-2 rounded-lg cursor-pointer transition-colors
+                          ${depositPaymentMethod === 'zalopay' ? 'border-primary-500 bg-white' : 'border-gray-200 hover:border-gray-300 bg-white'}`}
+                      >
+                        <input 
+                          type="radio" 
+                          name="depositPayment" 
+                          value="zalopay"
+                          checked={depositPaymentMethod === 'zalopay'}
+                          onChange={() => setDepositPaymentMethod('zalopay')}
+                          className="sr-only"
+                        />
+                        <Smartphone size={16} className={depositPaymentMethod === 'zalopay' ? 'text-primary-500' : 'text-gray-400'} />
+                        <span className="text-sm font-medium">ZaloPay</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -336,23 +421,11 @@ export default function CheckoutPage() {
               )}
             </div>
 
-            {/* Delivery mode */}
+            {/* Delivery mode - CHỈ GIAO TẬN NƠI */}
             <div className="card p-5">
-              <h3 className="font-semibold mb-3 flex items-center gap-2"><Truck size={16} /> Nhận hàng</h3>
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                <button type="button" onClick={() => setDeliveryMode('ship')}
-                  className={`py-2 rounded-lg text-sm font-medium border-2 transition-colors
-                    ${deliveryMode === 'ship' ? 'border-primary-500 bg-primary-50 text-primary-600' : 'border-gray-200 text-gray-600'}`}>
-                  Giao tận nơi
-                </button>
-                <button type="button" onClick={() => setDeliveryMode('pickup')}
-                  className={`py-2 rounded-lg text-sm font-medium border-2 transition-colors
-                    ${deliveryMode === 'pickup' ? 'border-primary-500 bg-primary-50 text-primary-600' : 'border-gray-200 text-gray-600'}`}>
-                  Nhận tại showroom
-                </button>
-              </div>
-
-              {deliveryMode === 'ship' && !!shippingMethods?.length && (
+              <h3 className="font-semibold mb-3 flex items-center gap-2"><Truck size={16} /> Phương thức giao hàng</h3>
+              
+              {!!shippingMethods?.length && (
                 <div className="space-y-2">
                   {shippingMethods.map(m => (
                     <label key={m.id}
@@ -373,31 +446,6 @@ export default function CheckoutPage() {
                       </span>
                     </label>
                   ))}
-                </div>
-              )}
-
-              {deliveryMode === 'pickup' && (
-                <div>
-                  {!stores?.length ? (
-                    <p className="text-sm text-gray-400">Đang tải danh sách showroom...</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {stores.map(s => (
-                        <label key={s.id}
-                          className={`flex items-start gap-2 p-3 border-2 rounded-xl cursor-pointer transition-colors
-                            ${pickupStoreId === s.id ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'}`}
-                        >
-                          <input type="radio" name="pickupStore" checked={pickupStoreId === s.id}
-                            onChange={() => setPickupStoreId(s.id)} className="sr-only mt-0.5" />
-                          <StoreIcon size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                          <div>
-                            <p className="text-sm font-medium">{s.name}</p>
-                            <p className="text-xs text-gray-400">{s.address}</p>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  )}
                 </div>
               )}
             </div>
@@ -424,12 +472,28 @@ export default function CheckoutPage() {
                 <span>Tổng cộng:</span>
                 <span className="text-primary-500">{formatPrice(total)}</span>
               </div>
+              
+              {/* Hiển thị thông tin thanh toán cho COD */}
+              {paymentMethod === 'cod' && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-blue-800 font-medium">Thanh toán ngay (cọc):</span>
+                    <span className="text-blue-900 font-bold">{formatPrice(COD_DEPOSIT_FEE)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-blue-700">Thanh toán khi nhận:</span>
+                    <span className="text-blue-800 font-semibold">{formatPrice(total - COD_DEPOSIT_FEE)}</span>
+                  </div>
+                </div>
+              )}
+              
               <button
                 type="submit"
                 disabled={createOrder.isPending}
                 className="btn-primary w-full py-3 text-base"
               >
-                {createOrder.isPending ? 'Đang xử lý...' : 'Đặt hàng'}
+                {createOrder.isPending ? 'Đang xử lý...' : 
+                  paymentMethod === 'cod' ? `Thanh toán cọc ${formatPrice(COD_DEPOSIT_FEE)}` : 'Đặt hàng'}
               </button>
               <p className="text-xs text-gray-400 text-center">
                 Bằng cách đặt hàng, bạn đồng ý với điều khoản dịch vụ của KinhDuanPC
