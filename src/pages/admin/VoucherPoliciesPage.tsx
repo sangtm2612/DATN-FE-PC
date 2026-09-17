@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/axios'
-import { Plus, Shield, Trash2, Edit2, Gift, ShoppingCart, Cake, TrendingUp, Hash, Star } from 'lucide-react'
+import { Plus, Shield, Trash2, Edit2, Gift, ShoppingCart, Cake, TrendingUp, Hash, Star, History, X } from 'lucide-react'
 import { formatPrice, formatDate } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import AuditTimeline from '@/components/admin/AuditTimeline'
 
 interface VoucherPolicy {
   id: number
@@ -51,6 +52,7 @@ export default function VoucherPoliciesPage() {
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId] = useState<number | null>(null)
   const [form, setForm] = useState(emptyForm)
+  const [historyId, setHistoryId] = useState<number | null>(null)
   const qc = useQueryClient()
 
   const { data: policies } = useQuery({
@@ -182,6 +184,9 @@ export default function VoucherPoliciesPage() {
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                     {p.isActive ? 'Hoạt động' : 'Tắt'}
                   </span>
+                  <button onClick={() => setHistoryId(p.id)} className="p-2 hover:bg-indigo-50 rounded-lg text-gray-400 hover:text-indigo-500" title="Lịch sử thay đổi">
+                    <History size={16} />
+                  </button>
                   <button onClick={() => openEdit(p)} className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600">
                     <Edit2 size={16} />
                   </button>
@@ -202,6 +207,21 @@ export default function VoucherPoliciesPage() {
           </div>
         )}
       </div>
+
+      {/* History Modal */}
+      {historyId && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white">
+              <h3 className="font-bold text-lg flex items-center gap-2"><History size={18} /> Lịch sử chính sách</h3>
+              <button onClick={() => setHistoryId(null)}><X size={18} /></button>
+            </div>
+            <div className="p-6">
+              <AuditTimeline entityType="VOUCHER_POLICY" entityId={historyId} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Form */}
       {showForm && (

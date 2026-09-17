@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/axios'
-import { Plus, Percent } from 'lucide-react'
+import { Plus, Percent, Edit2, Trash2, X } from 'lucide-react'
 import { formatPrice, formatDate } from '@/lib/utils'
 import type { Category, Brand } from '@/types'
 import toast from 'react-hot-toast'
@@ -54,6 +54,7 @@ const emptyForm = {
 
 export default function AdminPromotionsPage() {
   const [showForm, setShowForm] = useState(false)
+  const [editId, setEditId] = useState<number | null>(null)
   const [form, setForm] = useState(emptyForm)
   const qc = useQueryClient()
 
@@ -73,30 +74,34 @@ export default function AdminPromotionsPage() {
   })
 
   const save = useMutation({
-    mutationFn: () => api.post('/promotions', {
-      ...form,
-      maxDiscount: form.maxDiscount || null,
-      buildpcMinCpuDiscountPct: form.buildpcMinCpuDiscountPct || null,
-      buildpcMaxCpuDiscountPct: form.buildpcMaxCpuDiscountPct || null,
-      buildpcCashBonus: form.buildpcCashBonus || null,
-      buildpcMaxCashBonus: form.buildpcMaxCashBonus || null,
-      productIds: form.productIds ? form.productIds.split(',').map(s => +s.trim()).filter(Boolean) : [],
-    }),
-    onSuccess: () => {
-      toast.success('Tạo khuyến mãi thành công')
-      qc.invalidateQueries({ queryKey: ['admin-promotions'] })
-      setShowForm(false); setForm(emptyForm)
+    mutationFn: () => {
+      const payload = {
+        ...form,
+        maxDiscount: form.maxDiscount || null,
+        buildpcMinCpuDiscountPct: form.buildpcMinCpuDiscountPct || null,
+        buildpcMaxCpuDiscountPct: form.buildpcMaxCpuDiscountPct || null,
+        buildpcCashBonus: form.buildpcCashBonus || null,
+        buildpcMaxCashBonus: form.buildpcMaxCashBonus || null,
+        productIds: form.productIds ? form.productIds.split(',').map(s => +s.trim()).filter(Boolean) : [],
+      }
+      return editId
+        ? api.put(`/promotions/${editId}`, payload)
+        : api.post('/promotions', payload)
     },
-  })
-
-  const toggleActive = useMutation({
-    mutationFn: (p: Promotion) => api.put(`/promotions/${p.id}`, { ...p, isActive: !p.isActive }),
-    onSuccess: () => { toast.success('Đã cập nhật'); qc.invalidateQueries({ queryKey: ['admin-promotions'] }) },
+    onSuccess: () => {
+      toast.success(editId ? 'Cập nhật khuyến mãi thành công' : 'Tạo khuyến mãi thành công')
+      qc.invalidateQueries({ queryKey: ['admin-promotions'] })
+      closeForm()
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Thao tác thất bại')
+    },
   })
 
   const remove = useMutation({
     mutationFn: (id: number) => api.delete(`/promotions/${id}`),
     onSuccess: () => { toast.success('Đã xóa'); qc.invalidateQueries({ queryKey: ['admin-promotions'] }) },
+    onError: (err: any) => toast.error(err?.response?.data?.message || 'Xóa thất bại'),
   })
 
   const toggleScope = (key: 'categoryIds' | 'brandIds', id: number) => {
@@ -104,6 +109,36 @@ export default function AdminPromotionsPage() {
       ...f,
       [key]: f[key].includes(id) ? f[key].filter(x => x !== id) : [...f[key], id],
     }))
+  }
+
+  const openEdit = (p: Promotion) => {
+    setEditId(p.id)
+    setForm({
+      promotionType: p.promotionType,
+      name: p.name,
+      description: '',
+      discountType: p.discountType,
+      discountValue: p.discountValue,
+      minOrderValue: p.minOrderValue ?? 0,
+      maxDiscount: p.maxDiscount != null ? String(p.maxDiscount) : '',
+      startDate: p.startDate?.slice(0, 16) || '',
+      endDate: p.endDate?.slice(0, 16) || '',
+      isActive: p.isActive,
+      buildpcMinCpuDiscountPct: p.buildpcMinCpuDiscountPct != null ? String(p.buildpcMinCpuDiscountPct) : '',
+      buildpcMaxCpuDiscountPct: p.buildpcMaxCpuDiscountPct != null ? String(p.buildpcMaxCpuDiscountPct) : '',
+      buildpcCashBonus: p.buildpcCashBonus != null ? String(p.buildpcCashBonus) : '',
+      buildpcMaxCashBonus: p.buildpcMaxCashBonus != null ? String(p.buildpcMaxCashBonus) : '',
+      productIds: p.productIds?.join(',') || '',
+      categoryIds: p.categoryIds || [],
+      brandIds: p.brandIds || [],
+    })
+    setShowForm(true)
+  }
+
+  const closeForm = () => {
+    setShowForm(false)
+    setEditId(null)
+    setForm(emptyForm)
   }
 
   return (
@@ -125,12 +160,9 @@ export default function AdminPromotionsPage() {
                   {PROMOTION_TYPE_LABEL[p.promotionType] || p.promotionType}
                 </span>
               </div>
-              <button
-                onClick={() => toggleActive.mutate(p)}
-                className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
-              >
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                 {p.isActive ? 'Đang hoạt động' : 'Vô hiệu'}
-              </button>
+              </span>
             </div>
             <p className="font-semibold text-gray-800 mb-2">{p.name}</p>
             <div className="space-y-1 text-sm text-gray-600">
@@ -149,8 +181,16 @@ export default function AdminPromotionsPage() {
                 : `${p.productIds.length} SP, ${p.categoryIds.length} danh mục, ${p.brandIds.length} thương hiệu`}</p>
               <p>{formatDate(p.startDate, 'DD/MM/YYYY')} – {formatDate(p.endDate, 'DD/MM/YYYY')}</p>
             </div>
-            <button onClick={() => remove.mutate(p.id)}
-              className="mt-3 text-xs text-red-500 hover:underline">Xóa</button>
+            <div className="mt-3 flex gap-2">
+              <button onClick={() => openEdit(p)}
+                className="flex items-center gap-1.5 text-xs text-blue-600 hover:underline">
+                <Edit2 size={12} /> Chỉnh sửa
+              </button>
+              <button onClick={() => { if (confirm('Xóa khuyến mãi này?')) remove.mutate(p.id) }}
+                className="flex items-center gap-1.5 text-xs text-red-500 hover:underline">
+                <Trash2 size={12} /> Xóa
+              </button>
+            </div>
           </div>
         ))}
         {!promotions?.length && (
@@ -163,8 +203,8 @@ export default function AdminPromotionsPage() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white">
-              <h3 className="font-bold text-lg">Tạo khuyến mãi mới</h3>
-              <button onClick={() => setShowForm(false)}>X</button>
+              <h3 className="font-bold text-lg">{editId ? 'Chỉnh sửa khuyến mãi' : 'Tạo khuyến mãi mới'}</h3>
+              <button onClick={closeForm}><X size={18} /></button>
             </div>
             <div className="p-6 space-y-4">
               <div>
@@ -242,7 +282,7 @@ export default function AdminPromotionsPage() {
                       {flattenCategoryTree(categories).map(c => (
                         <button type="button" key={c.id} onClick={() => toggleScope('categoryIds', c.id)}
                           className={`text-xs px-2.5 py-1 rounded-full border ${form.categoryIds.includes(c.id) ? 'bg-primary-500 text-white border-primary-500' : 'border-gray-200 text-gray-600'}`}>
-                          {'\u00A0\u00A0'.repeat(c.depth) + (c.depth > 0 ? '- ' : '') + c.name}
+                          {'  '.repeat(c.depth) + (c.depth > 0 ? '- ' : '') + c.name}
                         </button>
                       ))}
                     </div>
@@ -263,11 +303,16 @@ export default function AdminPromotionsPage() {
                   </div>
                 )}
               </div>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={form.isActive} onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))} className="rounded" />
+                <span className="text-sm font-medium">Kích hoạt khuyến mãi</span>
+              </label>
             </div>
             <div className="flex gap-3 px-6 pb-6">
-              <button onClick={() => setShowForm(false)} className="btn-outline flex-1">Hủy</button>
+              <button onClick={closeForm} className="btn-outline flex-1">Hủy</button>
               <button onClick={() => save.mutate()} disabled={save.isPending} className="btn-primary flex-1">
-                {save.isPending ? 'Đang tạo...' : 'Tạo khuyến mãi'}
+                {save.isPending ? 'Đang lưu...' : (editId ? 'Cập nhật' : 'Tạo khuyến mãi')}
               </button>
             </div>
           </div>

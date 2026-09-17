@@ -67,7 +67,25 @@ export default function CartDrawer() {
                     className="text-sm font-medium text-gray-800 hover:text-primary-500 line-clamp-2">
                     {item.productName}
                   </Link>
-                  <p className="text-primary-500 font-bold text-sm mt-0.5">{formatPrice(item.unitPrice)}</p>
+                  <div className="mt-0.5 space-y-0.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-primary-500 font-bold text-sm">{formatPrice(item.unitPrice)}</span>
+                      {item.originalPrice && item.originalPrice > item.unitPrice && (
+                        <>
+                          <span className="text-xs text-gray-400 line-through">{formatPrice(item.originalPrice)}</span>
+                          <span className="text-xs bg-red-100 text-red-600 px-1 rounded font-medium">
+                            -{Math.round((item.originalPrice - item.unitPrice) / item.originalPrice * 100)}%
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    {item.promotionLabel && item.promotionDiscount && item.promotionDiscount > 0 && (
+                      <div className="flex items-center gap-1 text-xs">
+                        <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded font-medium leading-none">{item.promotionLabel}</span>
+                        <span className="text-orange-500">-{formatPrice(item.promotionDiscount)}</span>
+                      </div>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2 mt-1.5">
                     <button
                       onClick={() => updateItem.mutate({ id: item.productId, qty: item.quantity - 1 })}
@@ -94,9 +112,34 @@ export default function CartDrawer() {
         {/* Footer */}
         {cart.items.length > 0 && (
           <div className="border-t px-5 py-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">Tạm tính:</span>
-              <span className="font-bold text-lg price">{formatPrice(cart.totalAmount)}</span>
+            <div className="space-y-1.5 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Tạm tính:</span>
+                <span className="font-bold text-lg price">{formatPrice(cart.totalAmount)}</span>
+              </div>
+              {cart.promotionBreakdown && cart.promotionBreakdown.length > 0
+                ? cart.promotionBreakdown.map(pb => (
+                    <div key={pb.label} className="flex justify-between text-green-600">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-orange-400 inline-block flex-shrink-0" />
+                        {pb.label}:
+                      </span>
+                      <span>-{formatPrice(pb.totalDiscount)}</span>
+                    </div>
+                  ))
+                : !!cart.autoDiscount && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Khuyến mãi:</span>
+                      <span>-{formatPrice(cart.autoDiscount)}</span>
+                    </div>
+                  )
+              }
+              {!!cart.autoDiscount && (
+                <div className="flex items-center justify-between font-semibold border-t pt-1.5">
+                  <span>Sau KM:</span>
+                  <span className="text-primary-500">{formatPrice(cart.totalAmount - cart.autoDiscount)}</span>
+                </div>
+              )}
             </div>
             <p className="text-xs text-gray-400 text-center">Phí vận chuyển sẽ được tính ở bước thanh toán</p>
             <button onClick={handleCheckout} className="btn-primary w-full text-center py-3 text-base">

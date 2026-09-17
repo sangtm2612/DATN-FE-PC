@@ -49,6 +49,11 @@ export default function ProductCard({ product, showQuickAdd = true }: Props) {
           {product.isOnSale && product.discountPercent && (
             <span className="badge-sale">-{product.discountPercent}%</span>
           )}
+          {product.promotionLabel && (
+            <span className="bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded truncate max-w-[110px]">
+              {product.promotionLabel}
+            </span>
+          )}
           {product.isNew && (
             <span className="bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded">MỚI</span>
           )}
@@ -109,10 +114,35 @@ export default function ProductCard({ product, showQuickAdd = true }: Props) {
         )}
 
         {/* Price */}
-        <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="price text-base">{formatPrice(product.price)}</span>
-          {product.originalPrice && product.originalPrice > product.price && (
-            <span className="price-original">{formatPrice(product.originalPrice)}</span>
+        <div className="space-y-1">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            {/* Giá cuối cùng */}
+            {product.promotionPrice && product.promotionPrice < product.price ? (
+              <span className="price text-base text-orange-500">{formatPrice(product.promotionPrice)}</span>
+            ) : (
+              <span className="price text-base">{formatPrice(product.price)}</span>
+            )}
+            {/* Gạch ngang: giá sale (nếu có promo) */}
+            {product.promotionPrice && product.promotionPrice < product.price && (
+              <span className="price-original">{formatPrice(product.price)}</span>
+            )}
+            {/* Gạch ngang: giá gốc (nếu đang sale) */}
+            {product.originalPrice && product.originalPrice > product.price && (
+              <span className="price-original text-xs">{formatPrice(product.originalPrice)}</span>
+            )}
+          </div>
+          {/* Badges giảm giá */}
+          {(product.discountPercent || (product.promotionLabel && product.promotionPrice && product.promotionPrice < product.price)) && (
+            <div className="flex gap-1 flex-wrap">
+              {product.discountPercent && product.isOnSale && (
+                <span className="badge-sale">-{product.discountPercent}%</span>
+              )}
+              {product.promotionLabel && product.promotionPrice && product.promotionPrice < product.price && (
+                <span className="bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded truncate max-w-[120px]">
+                  {product.promotionLabel}
+                </span>
+              )}
+            </div>
           )}
         </div>
 

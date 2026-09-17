@@ -3,9 +3,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/axios'
 import type { Warranty } from '@/types'
 import Pagination from '@/components/common/Pagination'
-import { Search, X, Shield, CheckCircle, AlertTriangle, Clock, Edit2, Check } from 'lucide-react'
+import { Search, X, Shield, CheckCircle, AlertTriangle, Clock, Edit2, Check, History } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { formatDate } from '@/lib/utils'
+import AuditTimeline from '@/components/admin/AuditTimeline'
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   active:     { label: 'Còn hiệu lực', color: 'bg-green-100 text-green-700 border-green-200' },
@@ -20,6 +21,7 @@ export default function AdminWarrantiesPage() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editSerial, setEditSerial] = useState('')
   const [editNotes, setEditNotes]   = useState('')
+  const [historyId, setHistoryId]   = useState<number | null>(null)
   const qc = useQueryClient()
 
   const { data, isLoading } = useQuery({
@@ -190,13 +192,22 @@ export default function AdminWarrantiesPage() {
                       </button>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => startEdit(w)}
-                      className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors text-gray-500 hover:text-primary-500"
-                      title="Nhập serial / ghi chú"
-                    >
-                      <Edit2 size={16} />
-                    </button>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => startEdit(w)}
+                        className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors text-gray-500 hover:text-primary-500"
+                        title="Nhập serial / ghi chú"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => setHistoryId(w.id)}
+                        className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors text-gray-500 hover:text-indigo-500"
+                        title="Lịch sử thay đổi"
+                      >
+                        <History size={16} />
+                      </button>
+                    </div>
                   )}
                 </td>
               </tr>
@@ -214,6 +225,20 @@ export default function AdminWarrantiesPage() {
 
       {pagination && !search && (
         <Pagination page={pagination.page} totalPages={pagination.totalPages} onPageChange={setPage} />
+      )}
+
+      {historyId && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white">
+              <h3 className="font-bold text-lg flex items-center gap-2"><History size={18} /> Lịch sử bảo hành</h3>
+              <button onClick={() => setHistoryId(null)}><X size={18} /></button>
+            </div>
+            <div className="p-6">
+              <AuditTimeline entityType="WARRANTY" entityId={historyId} />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

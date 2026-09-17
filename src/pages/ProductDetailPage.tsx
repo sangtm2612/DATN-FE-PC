@@ -175,16 +175,45 @@ export default function ProductDetailPage() {
           )}
 
           {/* Price */}
-          <div className="bg-gray-50 rounded-xl p-4">
+          <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+            {/* Chuỗi giá: cuối cùng → gạch ngang các lớp trước */}
             <div className="flex items-baseline gap-3 flex-wrap">
-              <span className="text-3xl font-bold text-primary-500">{formatPrice(product.price)}</span>
-              {product.originalPrice && product.originalPrice > product.price && (
-                <span className="text-lg text-gray-400 line-through">{formatPrice(product.originalPrice)}</span>
+              {product.promotionPrice && product.promotionPrice < product.price ? (
+                <span className="text-3xl font-bold text-orange-500">{formatPrice(product.promotionPrice)}</span>
+              ) : (
+                <span className="text-3xl font-bold text-primary-500">{formatPrice(product.price)}</span>
               )}
-              {product.discountPercent && (
-                <span className="badge-sale text-sm">-{product.discountPercent}%</span>
+              {/* Gạch ngang giá sale (nếu đang có promo) */}
+              {product.promotionPrice && product.promotionPrice < product.price && (
+                <span className="text-lg text-gray-400 line-through">{formatPrice(product.price)}</span>
+              )}
+              {/* Gạch ngang giá gốc (nếu đang on-sale) */}
+              {product.originalPrice && product.originalPrice > product.price && (
+                <span className="text-base text-gray-400 line-through">{formatPrice(product.originalPrice)}</span>
               )}
             </div>
+
+            {/* Badges: sale % + tên khuyến mãi */}
+            {(product.discountPercent || (product.promotionLabel && product.promotionPrice && product.promotionPrice < product.price)) && (
+              <div className="flex gap-2 flex-wrap items-center">
+                {product.discountPercent && product.isOnSale && (
+                  <span className="badge-sale text-sm">-{product.discountPercent}%</span>
+                )}
+                {product.promotionLabel && product.promotionPrice && product.promotionPrice < product.price && (
+                  <span className="bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded">
+                    {product.promotionLabel}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Tổng tiết kiệm khi có cả 2 lớp */}
+            {product.promotionPrice && product.promotionPrice < product.price
+              && product.originalPrice && product.originalPrice > product.price && (
+              <p className="text-sm text-green-600 font-medium">
+                Tiết kiệm: {formatPrice(product.originalPrice - product.promotionPrice)} so với giá gốc
+              </p>
+            )}
           </div>
 
           {/* Short desc */}

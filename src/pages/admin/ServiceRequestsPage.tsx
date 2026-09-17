@@ -6,6 +6,7 @@ import { formatDate, formatPrice } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import { Eye, X, Search } from 'lucide-react'
 import Pagination from '@/components/common/Pagination'
+import AuditTimeline from '@/components/admin/AuditTimeline'
 
 const STATUS_OPTS: ServiceRequestStatus[] = ['received', 'diagnosing', 'repairing', 'waiting_part', 'done', 'returned']
 const STATUS_LABEL: Record<ServiceRequestStatus, string> = {
@@ -204,6 +205,10 @@ export default function AdminServiceRequestsPage() {
                   Khách hàng đã {selected.customerApprovedRepair ? 'duyệt' : 'từ chối'} báo giá
                 </p>
               )}
+            </div>
+            <div className="px-6 pb-4 border-t pt-4">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Lịch sử xử lý</p>
+              <AuditTimeline entityType="SERVICE_REQUEST" entityId={selected.id} />
             </div>
             <div className="flex gap-3 px-6 pb-6">
               <button onClick={() => setSelected(null)} className="btn-outline flex-1">Hủy</button>

@@ -75,7 +75,25 @@ export default function CartPage() {
                   {item.productName}
                 </Link>
                 {item.sku && <p className="text-xs text-gray-400 mt-0.5">SKU: {item.sku}</p>}
-                <p className="text-primary-500 font-bold mt-1">{formatPrice(item.unitPrice)}</p>
+                <div className="mt-1 space-y-0.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-primary-500 font-bold">{formatPrice(item.unitPrice)}</span>
+                    {item.originalPrice && item.originalPrice > item.unitPrice && (
+                      <>
+                        <span className="text-sm text-gray-400 line-through">{formatPrice(item.originalPrice)}</span>
+                        <span className="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-medium">
+                          -{Math.round((item.originalPrice - item.unitPrice) / item.originalPrice * 100)}%
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  {item.promotionLabel && item.promotionDiscount && item.promotionDiscount > 0 && (
+                    <div className="flex items-center gap-1 text-xs">
+                      <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded font-medium">{item.promotionLabel}</span>
+                      <span className="text-orange-500">-{formatPrice(item.promotionDiscount)}</span>
+                    </div>
+                  )}
+                </div>
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex items-center border rounded-lg overflow-hidden">
                     <button
@@ -116,12 +134,23 @@ export default function CartPage() {
                 <span>Phí vận chuyển:</span>
                 <span className="text-green-600">Tính lúc thanh toán</span>
               </div>
-              {!!cart.autoDiscount && (
-                <div className="flex justify-between text-green-600">
-                  <span>Khuyến mãi tự động:</span>
-                  <span>-{formatPrice(cart.autoDiscount)}</span>
-                </div>
-              )}
+              {cart.promotionBreakdown && cart.promotionBreakdown.length > 0
+                ? cart.promotionBreakdown.map(pb => (
+                    <div key={pb.label} className="flex justify-between text-green-600">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-orange-400 inline-block flex-shrink-0" />
+                        {pb.label}:
+                      </span>
+                      <span>-{formatPrice(pb.totalDiscount)}</span>
+                    </div>
+                  ))
+                : !!cart.autoDiscount && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Khuyến mãi tự động:</span>
+                      <span>-{formatPrice(cart.autoDiscount)}</span>
+                    </div>
+                  )
+              }
             </div>
             <div className="flex justify-between font-bold text-lg border-t pt-3">
               <span>Tổng:</span>

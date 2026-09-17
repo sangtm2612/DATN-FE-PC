@@ -6,6 +6,7 @@ import { formatDate, formatPrice } from '@/lib/utils'
 import toast from 'react-hot-toast'
 import { Eye, X, Search } from 'lucide-react'
 import Pagination from '@/components/common/Pagination'
+import AuditTimeline from '@/components/admin/AuditTimeline'
 
 const STATUS_OPTS: ReturnRequestStatus[] = ['pending', 'reviewing', 'approved', 'rejected', 'completed']
 const STATUS_LABEL: Record<ReturnRequestStatus, string> = {
@@ -253,6 +254,11 @@ export default function AdminReturnRequestsPage() {
               {selected.status === 'rejected' && (
                 <p className="text-sm text-red-500 font-medium border-t pt-4">Yêu cầu đã bị từ chối</p>
               )}
+
+              <div className="border-t pt-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Lịch sử xử lý</p>
+                <AuditTimeline entityType="RETURN_REQUEST" entityId={selected.id} />
+              </div>
             </div>
           </div>
         </div>

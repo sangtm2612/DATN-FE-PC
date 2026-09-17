@@ -71,6 +71,8 @@ export interface Product {
   originalPrice?: number
   isOnSale: boolean
   discountPercent?: number
+  promotionPrice?: number
+  promotionLabel?: string
   stockQty: number
   soldQty: number
   viewCount: number
@@ -104,9 +106,17 @@ export interface CartItem {
   sku?: string
   unitPrice: number
   currentPrice: number
+  originalPrice?: number
   quantity: number
   stockQty: number
   subtotal: number
+  promotionLabel?: string
+  promotionDiscount?: number
+}
+
+export interface PromotionSummary {
+  label: string
+  totalDiscount: number
 }
 
 export interface Cart {
@@ -114,6 +124,7 @@ export interface Cart {
   totalItems: number
   totalAmount: number
   autoDiscount?: number
+  promotionBreakdown?: PromotionSummary[]
 }
 
 // Order

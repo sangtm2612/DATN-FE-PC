@@ -379,18 +379,49 @@ export default function CheckoutPage() {
             {/* Cart items */}
             <div className="card p-5">
               <h2 className="font-bold text-lg mb-4">Đơn hàng ({cart.totalItems} sản phẩm)</h2>
-              <div className="space-y-3 max-h-64 overflow-y-auto">
-                {cart.items.map(item => (
-                  <div key={item.productId} className="flex gap-3">
-                    <img src={item.thumbnail || '/placeholder.png'} alt={item.productName}
-                      className="w-12 h-12 object-contain bg-gray-50 rounded-lg border flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{item.productName}</p>
-                      <p className="text-xs text-gray-500">x{item.quantity}</p>
+              <div className="space-y-4 max-h-72 overflow-y-auto pr-1">
+                {cart.items.map(item => {
+                  const hasSaleDiscount = item.originalPrice && item.originalPrice > item.unitPrice
+                  const saleDiscountPct = hasSaleDiscount
+                    ? Math.round((item.originalPrice! - item.unitPrice) / item.originalPrice! * 100)
+                    : 0
+                  const hasPromoDiscount = !!(item.promotionLabel && item.promotionDiscount && item.promotionDiscount > 0)
+                  return (
+                    <div key={item.productId} className="flex gap-3">
+                      <img src={item.thumbnail || '/placeholder.png'} alt={item.productName}
+                        className="w-12 h-12 object-contain bg-gray-50 rounded-lg border flex-shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{item.productName}</p>
+                        {/* Giá gốc + badge giảm giá sale */}
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                          <span className="text-xs text-gray-500">x{item.quantity}</span>
+                          {hasSaleDiscount ? (
+                            <>
+                              <span className="text-xs text-gray-400 line-through">{formatPrice(item.originalPrice!)}/sp</span>
+                              <span className="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-medium">-{saleDiscountPct}%</span>
+                              <span className="text-xs text-gray-700 font-medium">{formatPrice(item.unitPrice)}/sp</span>
+                            </>
+                          ) : (
+                            <span className="text-xs text-gray-500">{formatPrice(item.unitPrice)}/sp</span>
+                          )}
+                        </div>
+                        {/* Badge khuyến mãi + số tiền giảm */}
+                        {hasPromoDiscount && (
+                          <p className="text-xs flex items-center gap-1 mt-0.5">
+                            <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded font-medium leading-none">{item.promotionLabel}</span>
+                            <span className="text-orange-500">-{formatPrice(item.promotionDiscount!)}</span>
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex-shrink-0 text-right">
+                        <p className="text-sm font-semibold text-primary-500">{formatPrice(item.subtotal)}</p>
+                        {hasSaleDiscount && (
+                          <p className="text-xs text-gray-400 line-through">{formatPrice(item.originalPrice! * item.quantity)}</p>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-sm font-semibold text-primary-500 flex-shrink-0">{formatPrice(item.subtotal)}</p>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
 
@@ -458,11 +489,22 @@ export default function CheckoutPage() {
               <div className="flex justify-between text-sm text-gray-600">
                 <span>Phí vận chuyển:</span><span>{formatPrice(shippingFee)}</span>
               </div>
-              {autoDiscount > 0 && (
-                <div className="flex justify-between text-sm text-green-600">
-                  <span>Khuyến mãi tự động:</span><span>-{formatPrice(autoDiscount)}</span>
-                </div>
-              )}
+              {cart.promotionBreakdown && cart.promotionBreakdown.length > 0
+                ? cart.promotionBreakdown.map(pb => (
+                    <div key={pb.label} className="flex justify-between text-sm text-green-600">
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-orange-400 inline-block flex-shrink-0" />
+                        {pb.label}:
+                      </span>
+                      <span>-{formatPrice(pb.totalDiscount)}</span>
+                    </div>
+                  ))
+                : autoDiscount > 0 && (
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>Khuyến mãi tự động:</span><span>-{formatPrice(autoDiscount)}</span>
+                    </div>
+                  )
+              }
               {voucherDiscount > 0 && (
                 <div className="flex justify-between text-sm text-green-600">
                   <span>Voucher:</span><span>-{formatPrice(voucherDiscount)}</span>
