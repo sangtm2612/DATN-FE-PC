@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/axios'
-import { Plus, Ticket, Copy } from 'lucide-react'
+import { Plus, Ticket, Copy, Search, X } from 'lucide-react'
 import { formatPrice, formatDate } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
 export default function AdminVouchersPage() {
   const [showForm, setShowForm] = useState(false)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'' | 'active' | 'inactive'>('')
   const [form, setForm] = useState({
     code: '', name: '', voucherType: 'PUBLIC', discountType: 'percent', discountValue: 0,
     minOrderValue: 0, maxDiscount: '', usageLimit: '', usagePerUser: 1,
@@ -29,6 +31,16 @@ export default function AdminVouchersPage() {
     setForm(f => ({ ...f, code }))
   }
 
+  const allVouchers: any[] = vouchers || []
+  const filtered = allVouchers.filter(v => {
+    const matchSearch = !search.trim() ||
+      v.code.toLowerCase().includes(search.toLowerCase()) ||
+      (v.name?.toLowerCase().includes(search.toLowerCase()))
+    const matchStatus = !statusFilter ||
+      (statusFilter === 'active' ? v.isActive : !v.isActive)
+    return matchSearch && matchStatus
+  })
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -38,8 +50,31 @@ export default function AdminVouchersPage() {
         </button>
       </div>
 
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="relative flex-1">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Tìm theo mã hoặc tên voucher..."
+            className="w-full pl-9 pr-9 py-2.5 border rounded-lg text-sm focus:outline-none focus:border-primary-500"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)}
+          className="border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-500 min-w-[160px]">
+          <option value="">Tất cả trạng thái</option>
+          <option value="active">Đang hoạt động</option>
+          <option value="inactive">Vô hiệu</option>
+        </select>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {vouchers?.map((v: any) => (
+        {filtered.map((v: any) => (
           <div key={v.id} className="card p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -72,8 +107,10 @@ export default function AdminVouchersPage() {
             </div>
           </div>
         ))}
-        {!vouchers?.length && (
-          <div className="col-span-3 text-center py-12 text-gray-400">Chưa có voucher nào</div>
+        {filtered.length === 0 && (
+          <div className="col-span-3 text-center py-12 text-gray-400">
+            {search || statusFilter ? 'Không tìm thấy voucher phù hợp' : 'Chưa có voucher nào'}
+          </div>
         )}
       </div>
 

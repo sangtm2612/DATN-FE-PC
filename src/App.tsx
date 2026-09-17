@@ -3,6 +3,7 @@ import { Suspense, lazy, useEffect } from 'react'
 import { useCartStore } from '@/store/cartStore'
 import { useAuthStore } from '@/store/authStore'
 import { cartService } from '@/services/cartService'
+import { useAutoLogout } from '@/hooks/useAutoLogout'
 import MainLayout from '@/layouts/MainLayout'
 import AdminLayout from '@/layouts/AdminLayout'
 import AuthLayout from '@/layouts/AuthLayout'
@@ -76,9 +77,12 @@ const AdminUsers           = lazy(() => import('@/pages/admin/UsersPage'))
 const AdminPromotions   = lazy(() => import('@/pages/admin/PromotionsPage'))
 const AdminStoreStock   = lazy(() => import('@/pages/admin/StoreStockPage'))
 const AdminServiceRequests = lazy(() => import('@/pages/admin/ServiceRequestsPage'))
-const AdminReturnRequests = lazy(() => import('@/pages/admin/ReturnRequestsPage'))
+const AdminReturnRequests  = lazy(() => import('@/pages/admin/ReturnRequestsPage'))
+const AdminWarranties      = lazy(() => import('@/pages/admin/WarrantiesPage'))
+const AdminRevenueReport   = lazy(() => import('@/pages/admin/RevenueReportPage'))
 
 export default function App() {
+  useAutoLogout()
   const { setCart } = useCartStore()
   const { isAuthenticated } = useAuthStore()
 
@@ -124,10 +128,12 @@ export default function App() {
               <Route path="/admin/categories"      element={<AdminCategories />} />
               <Route path="/admin/brands"          element={<AdminBrands />} />
               <Route path="/admin/return-requests" element={<AdminReturnRequests />} />
+              <Route path="/admin/warranties"      element={<AdminWarranties />} />
             </Route>
 
             {/* Admin only */}
             <Route element={<RoleRoute roles={['admin']} />}>
+              <Route path="/admin/revenue-report"   element={<AdminRevenueReport />} />
               <Route path="/admin/users"            element={<AdminUsers />} />
               <Route path="/admin/vouchers"         element={<AdminVouchers />} />
               <Route path="/admin/voucher-policies" element={<AdminVoucherPolicies />} />

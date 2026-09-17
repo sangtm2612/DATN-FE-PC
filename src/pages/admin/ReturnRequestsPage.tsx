@@ -4,12 +4,20 @@ import { returnRequestService } from '@/services/returnRequestService'
 import type { ReturnRequest, ReturnRequestStatus } from '@/types'
 import { formatDate, formatPrice } from '@/lib/utils'
 import toast from 'react-hot-toast'
-import { Eye, X } from 'lucide-react'
+import { Eye, X, Search } from 'lucide-react'
+import Pagination from '@/components/common/Pagination'
 
 const STATUS_OPTS: ReturnRequestStatus[] = ['pending', 'reviewing', 'approved', 'rejected', 'completed']
 const STATUS_LABEL: Record<ReturnRequestStatus, string> = {
   pending: 'Chờ xử lý', reviewing: 'Đang xem xét', approved: 'Đã duyệt',
   rejected: 'Đã từ chối', completed: 'Đã hoàn tất',
+}
+const STATUS_COLOR: Record<ReturnRequestStatus, string> = {
+  pending: 'bg-yellow-100 text-yellow-700',
+  reviewing: 'bg-blue-100 text-blue-700',
+  approved: 'bg-green-100 text-green-700',
+  rejected: 'bg-red-100 text-red-600',
+  completed: 'bg-gray-100 text-gray-600',
 }
 const REASON_LABEL: Record<string, string> = {
   defective: 'Sản phẩm bị lỗi', wrong_item: 'Giao sai sản phẩm',
@@ -18,6 +26,9 @@ const REASON_LABEL: Record<string, string> = {
 
 export default function AdminReturnRequestsPage() {
   const [status, setStatus] = useState('')
+  const [page, setPage] = useState(0)
+  const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('')
   const [selected, setSelected] = useState<ReturnRequest | null>(null)
   const [staffNote, setStaffNote] = useState('')
   const [resolution, setResolution] = useState<'exchange' | 'refund'>('refund')
@@ -25,8 +36,8 @@ export default function AdminReturnRequestsPage() {
   const qc = useQueryClient()
 
   const { data } = useQuery({
-    queryKey: ['admin-return-requests', status],
-    queryFn: () => returnRequestService.getAdminAll(status || undefined).then(r => r.data.data || []),
+    queryKey: ['admin-return-requests', status, page],
+    queryFn: () => returnRequestService.getAdminAll(status || undefined, page, 20).then(r => r.data),
   })
 
   const openDetail = (rr: ReturnRequest) => {
@@ -58,14 +69,44 @@ export default function AdminReturnRequestsPage() {
     onSuccess: (res) => { toast.success(res.data.message || 'Đã hoàn tất'); invalidate(); setSelected(null) },
   })
 
-  const requests: ReturnRequest[] = data || []
+  const requests: ReturnRequest[] = (data as any)?.data || []
+  const pagination = (data as any)?.pagination
+
+  const filtered = search.trim()
+    ? requests.filter(rr =>
+        rr.returnCode.toLowerCase().includes(search.toLowerCase()) ||
+        rr.orderCode?.toLowerCase().includes(search.toLowerCase()) ||
+        rr.userName?.toLowerCase().includes(search.toLowerCase()) ||
+        rr.userPhone?.includes(search)
+      )
+    : requests
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Yêu cầu đổi/trả hàng</h1>
-        <select value={status} onChange={e => setStatus(e.target.value)}
-          className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary-500">
+        <p className="text-sm text-gray-500">{pagination?.total != null ? `${pagination.total} yêu cầu` : ''}</p>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="relative flex-1">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { setSearch(searchInput.trim()); setPage(0) } }}
+            placeholder="Tìm mã YC, mã đơn, tên khách, SĐT..."
+            className="w-full pl-9 pr-9 py-2.5 border rounded-lg text-sm focus:outline-none focus:border-primary-500"
+          />
+          {searchInput && (
+            <button onClick={() => { setSearchInput(''); setSearch(''); setPage(0) }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        <select value={status} onChange={e => { setStatus(e.target.value); setPage(0) }}
+          className="border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-500 min-w-[160px]">
           <option value="">Tất cả trạng thái</option>
           {STATUS_OPTS.map(s => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
         </select>
@@ -81,7 +122,7 @@ export default function AdminReturnRequestsPage() {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {requests.map(rr => (
+            {filtered.map(rr => (
               <tr key={rr.id} className="hover:bg-gray-50">
                 <td className="px-4 py-3 font-mono font-medium text-primary-600">{rr.returnCode}</td>
                 <td className="px-4 py-3 font-mono text-gray-500">{rr.orderCode}</td>
@@ -89,9 +130,9 @@ export default function AdminReturnRequestsPage() {
                   <p className="font-medium">{rr.userName}</p>
                   <p className="text-gray-400 text-xs">{rr.userPhone}</p>
                 </td>
-                <td className="px-4 py-3">{REASON_LABEL[rr.reasonType] || rr.reasonType}</td>
+                <td className="px-4 py-3 text-gray-600">{REASON_LABEL[rr.reasonType] || rr.reasonType}</td>
                 <td className="px-4 py-3">
-                  <span className="text-xs font-semibold px-2 py-1 rounded-full bg-gray-100 text-gray-600">
+                  <span className={`text-xs font-semibold px-2 py-1 rounded-full ${STATUS_COLOR[rr.status] || 'bg-gray-100 text-gray-600'}`}>
                     {STATUS_LABEL[rr.status]}
                   </span>
                 </td>
@@ -106,10 +147,16 @@ export default function AdminReturnRequestsPage() {
             ))}
           </tbody>
         </table>
-        {requests.length === 0 && (
-          <div className="text-center py-12 text-gray-400">Không có yêu cầu đổi/trả nào</div>
+        {filtered.length === 0 && (
+          <div className="text-center py-12 text-gray-400">
+            {search ? `Không tìm thấy kết quả cho "${search}"` : 'Không có yêu cầu đổi/trả nào'}
+          </div>
         )}
       </div>
+
+      {pagination && !search && (
+        <Pagination page={pagination.page} totalPages={pagination.totalPages} onPageChange={setPage} />
+      )}
 
       {selected && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">

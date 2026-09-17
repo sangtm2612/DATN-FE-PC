@@ -3,18 +3,30 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/axios'
 import { Plus, Edit, Trash2, Image } from 'lucide-react'
 import toast from 'react-hot-toast'
+import ImageInput from '@/components/common/ImageInput'
 
 const POSITIONS = ['home_slider', 'sidebar', 'popup']
+const POSITION_LABEL: Record<string, string> = {
+  home_slider: 'Slider trang chủ',
+  sidebar: 'Sidebar',
+  popup: 'Popup',
+}
+const POSITION_DIM: Record<string, { minWidth: number; minHeight: number; hint: string }> = {
+  home_slider: { minWidth: 1200, minHeight: 400, hint: 'Khuyến nghị 1920 × 600px • Tỷ lệ 16:5 (ngang)' },
+  sidebar:     { minWidth: 300,  minHeight: 400, hint: 'Khuyến nghị 400 × 600px • Tỷ lệ 2:3 (dọc)' },
+  popup:       { minWidth: 400,  minHeight: 400, hint: 'Khuyến nghị 600 × 600px • Tỷ lệ 1:1 (vuông)' },
+}
 
 export default function AdminBannersPage() {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<any>(null)
+  const [positionTab, setPositionTab] = useState('home_slider')
   const [form, setForm] = useState({ title:'', imageUrl:'', linkUrl:'', position:'home_slider', sortOrder:0, isActive:true })
   const qc = useQueryClient()
 
   const { data: banners } = useQuery({
-    queryKey: ['all-banners'],
-    queryFn: () => api.get<{ data: any[] }>('/banners?position=home_slider').then(r => r.data.data || []),
+    queryKey: ['all-banners', positionTab],
+    queryFn: () => api.get<{ data: any[] }>(`/banners?position=${positionTab}`).then(r => r.data.data || []),
   })
 
   const save = useMutation({
@@ -25,13 +37,30 @@ export default function AdminBannersPage() {
     mutationFn: (id: number) => api.delete(`/banners/${id}`),
     onSuccess: () => { toast.success('Đã xóa'); qc.invalidateQueries({ queryKey: ['all-banners'] }) },
   })
+  const toggleActive = useMutation({
+    mutationFn: (banner: any) => api.put(`/banners/${banner.id}`, { ...banner, isActive: !banner.isActive }),
+    onSuccess: () => { toast.success('Đã cập nhật'); qc.invalidateQueries({ queryKey: ['all-banners'] }) },
+  })
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">Quản lý Banner</h1>
-        <button onClick={() => { setEditing(null); setForm({ title:'',imageUrl:'',linkUrl:'',position:'home_slider',sortOrder:0,isActive:true }); setShowForm(true) }}
+        <button onClick={() => { setEditing(null); setForm({ title:'',imageUrl:'',linkUrl:'',position:positionTab,sortOrder:0,isActive:true }); setShowForm(true) }}
           className="btn-primary flex items-center gap-2"><Plus size={16} /> Thêm Banner</button>
+      </div>
+
+      {/* Position tabs */}
+      <div className="flex gap-2 mb-5">
+        {POSITIONS.map(pos => (
+          <button key={pos}
+            onClick={() => setPositionTab(pos)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              positionTab === pos ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}>
+            {POSITION_LABEL[pos]}
+          </button>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -70,12 +99,21 @@ export default function AdminBannersPage() {
               <button onClick={() => setShowForm(false)}>X</button>
             </div>
             <div className="p-6 space-y-3">
-              {[{k:'title',l:'Tiêu đề'},{k:'imageUrl',l:'URL Ảnh *'},{k:'linkUrl',l:'Link đích'}].map(({k,l}) => (
+              {[{k:'title',l:'Tiêu đề'},{k:'linkUrl',l:'Link đích'}].map(({k,l}) => (
                 <div key={k}>
                   <label className="block text-sm font-medium mb-1">{l}</label>
                   <input value={(form as any)[k]} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} className="input" />
                 </div>
               ))}
+              <ImageInput
+                label="Ảnh banner *"
+                value={form.imageUrl}
+                onChange={url => setForm(f => ({ ...f, imageUrl: url }))}
+                previewClass="h-20 w-full object-cover"
+                minWidth={POSITION_DIM[form.position]?.minWidth}
+                minHeight={POSITION_DIM[form.position]?.minHeight}
+                dimensionHint={POSITION_DIM[form.position]?.hint}
+              />
               <div>
                 <label className="block text-sm font-medium mb-1">Vị trí</label>
                 <select value={form.position} onChange={e=>setForm(f=>({...f,position:e.target.value}))} className="input">

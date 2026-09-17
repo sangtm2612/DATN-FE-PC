@@ -4,6 +4,7 @@ import { productService } from '@/services/productService'
 import { tagService } from '@/services/tagService'
 import { formatPrice } from '@/lib/utils'
 import Pagination from '@/components/common/Pagination'
+import ImageInput from '@/components/common/ImageInput'
 import { Plus, Edit, Eye, Search, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -354,11 +355,15 @@ export default function AdminProductsPage() {
                 </div>
 
                 {/* Thumbnail */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">URL Ảnh đại diện</label>
-                  <input value={form.thumbnail} onChange={e => set('thumbnail', e.target.value)}
-                    className="input" placeholder="https://..." />
-                </div>
+                <ImageInput
+                  label="Ảnh đại diện sản phẩm"
+                  value={form.thumbnail}
+                  onChange={url => set('thumbnail', url)}
+                  previewClass="h-24 w-24 object-contain"
+                  minWidth={300}
+                  minHeight={300}
+                  dimensionHint="Khuyến nghị 600 × 600px • Vuông • Nền trắng/trong suốt"
+                />
 
                 {/* Giá bán */}
                 <div>
@@ -519,15 +524,6 @@ export default function AdminProductsPage() {
                   </>
                 )}
 
-                {/* Preview thumbnail */}
-                {form.thumbnail && (
-                  <div className="sm:col-span-2">
-                    <p className="text-xs text-gray-500 mb-2">Xem trước ảnh:</p>
-                    <img src={form.thumbnail} alt="preview"
-                      className="h-24 w-24 object-contain border rounded-xl bg-gray-50"
-                      onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                  </div>
-                )}
               </div>
             </div>
 

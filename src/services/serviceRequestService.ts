@@ -23,10 +23,12 @@ export const serviceRequestService = {
   getMy: () =>
     api.get<ApiResponse<ServiceRequest[]>>('/warranties/service-requests/my'),
 
-  getAdminAll: (status?: string, storeId?: number) =>
-    api.get<ApiResponse<ServiceRequest[]>>(
-      `/warranties/service-requests/admin?${status ? `status=${status}&` : ''}${storeId ? `storeId=${storeId}` : ''}`
-    ),
+  getAdminAll: (status?: string, storeId?: number, page = 0, size = 20) => {
+    const params = new URLSearchParams({ page: String(page), size: String(size) })
+    if (status) params.set('status', status)
+    if (storeId) params.set('storeId', String(storeId))
+    return api.get<ApiResponse<ServiceRequest[]> & { pagination?: any }>(`/warranties/service-requests/admin?${params}`)
+  },
 
   getTechnicians: () =>
     api.get<ApiResponse<{ id: number; fullName: string }[]>>('/warranties/service-requests/technicians'),

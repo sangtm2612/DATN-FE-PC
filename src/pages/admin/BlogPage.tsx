@@ -1,21 +1,31 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/axios'
-import { Plus, Edit, Eye, Link2, X } from 'lucide-react'
+import { Plus, Edit, Eye, Link2, X, Search } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import type { BlogPost } from '@/types'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import Pagination from '@/components/common/Pagination'
 
 export default function AdminBlogPage() {
   const [page, setPage] = useState(0)
+  const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const [publishedFilter, setPublishedFilter] = useState<'' | 'published' | 'draft'>('')
   const [productsModalPost, setProductsModalPost] = useState<BlogPost | null>(null)
   const [productIdsInput, setProductIdsInput] = useState('')
   const qc = useQueryClient()
 
   const { data } = useQuery({
-    queryKey: ['admin-blog', page],
-    queryFn: () => api.get<{ data: BlogPost[]; pagination: any }>(`/blog?page=${page}&size=15`).then(r => r.data),
+    queryKey: ['admin-blog', page, search, publishedFilter],
+    queryFn: () => {
+      const params = new URLSearchParams({ page: String(page), size: '15' })
+      if (search) params.set('keyword', search)
+      if (publishedFilter === 'published') params.set('isPublished', 'true')
+      if (publishedFilter === 'draft') params.set('isPublished', 'false')
+      return api.get<{ data: BlogPost[]; pagination: any }>(`/blog?${params}`).then(r => r.data)
+    },
   })
 
   const toggle = useMutation({
@@ -48,6 +58,31 @@ export default function AdminBlogPage() {
         <Link to="/admin/blog/new" className="btn-primary flex items-center gap-2">
           <Plus size={16} /> Viết bài mới
         </Link>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="relative flex-1">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { setSearch(searchInput.trim()); setPage(0) } }}
+            placeholder="Tìm tiêu đề bài viết..."
+            className="w-full pl-9 pr-9 py-2.5 border rounded-lg text-sm focus:outline-none focus:border-primary-500"
+          />
+          {searchInput && (
+            <button onClick={() => { setSearchInput(''); setSearch(''); setPage(0) }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        <select value={publishedFilter} onChange={e => { setPublishedFilter(e.target.value as any); setPage(0) }}
+          className="border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary-500 min-w-[150px]">
+          <option value="">Tất cả</option>
+          <option value="published">Đã đăng</option>
+          <option value="draft">Nháp</option>
+        </select>
       </div>
 
       <div className="card overflow-hidden">
@@ -98,6 +133,10 @@ export default function AdminBlogPage() {
         </table>
         {!data?.data?.length && <div className="text-center py-12 text-gray-400">Chưa có bài viết</div>}
       </div>
+
+      {data?.pagination && (
+        <Pagination page={data.pagination.page} totalPages={data.pagination.totalPages} onPageChange={setPage} />
+      )}
 
       {productsModalPost && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">

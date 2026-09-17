@@ -3,7 +3,7 @@ import { useState } from 'react'
 import {
   LayoutDashboard, Package, ShoppingCart, Tag, Layers,
   Image, FileText, MapPin, Ticket, Percent, Warehouse, Wrench, Undo2, LogOut, Menu, X,
-  ChevronRight, Bell, Shield, Users
+  ChevronRight, Bell, Shield, Users, BarChart2,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import toast from 'react-hot-toast'
@@ -15,10 +15,12 @@ const navItems = [
   { to: '/admin/products',   label: 'Sản phẩm',     icon: Package,         roles: ['admin', 'staff'] },
   { to: '/admin/categories', label: 'Danh mục',     icon: Layers,          roles: ['admin', 'staff'] },
   { to: '/admin/brands',     label: 'Thương hiệu',  icon: Tag,             roles: ['admin', 'staff'] },
-  { to: '/admin/return-requests', label: 'Đổi/trả hàng', icon: Undo2,     roles: ['admin', 'staff'] },
+  { to: '/admin/return-requests', label: 'Đổi/trả hàng',   icon: Undo2,   roles: ['admin', 'staff'] },
+  { to: '/admin/warranties',      label: 'Bảo hành',        icon: Shield,  roles: ['admin', 'staff'] },
   // Admin + Staff + Technician
   { to: '/admin/service-requests', label: 'Yêu cầu sửa chữa', icon: Wrench, roles: ['admin', 'staff', 'technician'] },
   // Admin only
+  { to: '/admin/revenue-report',   label: 'Báo cáo doanh thu',  icon: BarChart2, roles: ['admin'] },
   { to: '/admin/users',            label: 'Tài khoản',          icon: Users,    roles: ['admin'] },
   { to: '/admin/vouchers',         label: 'Voucher',             icon: Ticket,   roles: ['admin'] },
   { to: '/admin/voucher-policies', label: 'Chính sách voucher',  icon: Shield,   roles: ['admin'] },

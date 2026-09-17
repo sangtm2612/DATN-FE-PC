@@ -1,5 +1,34 @@
+import axios from 'axios'
 import { useAuthStore } from '@/store/authStore'
 import toast from 'react-hot-toast'
+
+export function decodeTokenExp(token: string): number | null {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return typeof payload.exp === 'number' ? payload.exp : null
+  } catch {
+    return null
+  }
+}
+
+export function isTokenExpired(token: string): boolean {
+  const exp = decodeTokenExp(token)
+  if (!exp) return true
+  return Date.now() / 1000 > exp - 30 // 30s buffer
+}
+
+export async function tryRefreshOrLogout(): Promise<boolean> {
+  const { refreshToken } = useAuthStore.getState()
+  if (!refreshToken) { handleTokenExpired(); return false }
+  try {
+    const { data } = await axios.post('/api/auth/refresh', null, { params: { refreshToken } })
+    useAuthStore.getState().setTokens(data.data.accessToken, data.data.refreshToken)
+    return true
+  } catch {
+    handleTokenExpired()
+    return false
+  }
+}
 
 /**
  * Xử lý logout tập trung

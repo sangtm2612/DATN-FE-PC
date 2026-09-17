@@ -22,8 +22,11 @@ export const returnRequestService = {
   getMy: () =>
     api.get<ApiResponse<ReturnRequest[]>>('/return-requests/my'),
 
-  getAdminAll: (status?: string) =>
-    api.get<ApiResponse<ReturnRequest[]>>(`/return-requests/admin${status ? `?status=${status}` : ''}`),
+  getAdminAll: (status?: string, page = 0, size = 20) => {
+    const params = new URLSearchParams({ page: String(page), size: String(size) })
+    if (status) params.set('status', status)
+    return api.get<ApiResponse<ReturnRequest[]> & { pagination?: any }>(`/return-requests/admin?${params}`)
+  },
 
   review: (id: number, staffNote?: string) =>
     api.put<ApiResponse<ReturnRequest>>(`/return-requests/${id}/review`, { staffNote }),

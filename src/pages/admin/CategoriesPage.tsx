@@ -4,6 +4,7 @@ import api from '@/lib/axios'
 import { Plus, Edit, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Category } from '@/types'
+import ImageInput from '@/components/common/ImageInput'
 
 export default function AdminCategoriesPage() {
   const [showForm, setShowForm] = useState(false)
@@ -29,7 +30,11 @@ export default function AdminCategoriesPage() {
 
   const remove = useMutation({
     mutationFn: (id: number) => api.delete(`/categories/${id}`),
-    onSuccess: () => { toast.success('Đã xóa'); qc.invalidateQueries({ queryKey: ['all-categories'] }) },
+    onSuccess: () => { toast.success('Đã xóa danh mục'); qc.invalidateQueries({ queryKey: ['all-categories'] }) },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message || 'Xóa danh mục thất bại'
+      toast.error(msg)
+    },
   })
 
   const openCreate = () => {
@@ -106,8 +111,6 @@ export default function AdminCategoriesPage() {
               {[
                 { key: 'name', label: 'Tên danh mục *' },
                 { key: 'slug', label: 'Slug URL *' },
-                { key: 'iconUrl', label: 'URL Icon' },
-                { key: 'imageUrl', label: 'URL Ảnh' },
                 { key: 'description', label: 'Mô tả' },
               ].map(({ key, label }) => (
                 <div key={key}>
@@ -115,6 +118,24 @@ export default function AdminCategoriesPage() {
                   <input value={(form as any)[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} className="input" />
                 </div>
               ))}
+              <ImageInput
+                label="Icon danh mục"
+                value={form.iconUrl}
+                onChange={url => setForm(f => ({ ...f, iconUrl: url }))}
+                previewClass="h-10 w-10 object-contain"
+                minWidth={32}
+                minHeight={32}
+                dimensionHint="Khuyến nghị 128 × 128px • Vuông • PNG trong suốt"
+              />
+              <ImageInput
+                label="Ảnh bìa danh mục"
+                value={form.imageUrl}
+                onChange={url => setForm(f => ({ ...f, imageUrl: url }))}
+                previewClass="h-20 w-32 object-cover"
+                minWidth={400}
+                minHeight={200}
+                dimensionHint="Khuyến nghị 800 × 400px • Tỷ lệ 2:1 (ngang)"
+              />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Thứ tự hiển thị</label>
                 <input type="number" value={form.sortOrder} onChange={e => setForm(f => ({ ...f, sortOrder: +e.target.value }))} className="input w-24" />

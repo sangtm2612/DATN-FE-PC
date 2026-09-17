@@ -265,6 +265,11 @@ export interface Warranty {
   warrantyMonths: number
   status: 'active' | 'expired' | 'voided' | 'in_service'
   product: { id: number; name: string; thumbnail?: string }
+  userId?: number
+  userName?: string
+  userPhone?: string
+  notes?: string
+  orderItemId?: number
 }
 
 // Service Request (yeu cau sua chua)

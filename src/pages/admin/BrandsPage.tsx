@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/axios'
 import { Plus, Edit, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import ImageInput from '@/components/common/ImageInput'
 
 export default function AdminBrandsPage() {
   const [showForm, setShowForm] = useState(false)
@@ -68,12 +69,21 @@ export default function AdminBrandsPage() {
               <button onClick={() => setShowForm(false)}>X</button>
             </div>
             <div className="p-6 space-y-3">
-              {[{k:'name',l:'Tên'},{k:'slug',l:'Slug'},{k:'logoUrl',l:'URL Logo'},{k:'website',l:'Website'},{k:'description',l:'Mô tả'}].map(({k,l}) => (
+              {[{k:'name',l:'Tên'},{k:'slug',l:'Slug'},{k:'website',l:'Website'},{k:'description',l:'Mô tả'}].map(({k,l}) => (
                 <div key={k}>
                   <label className="block text-sm font-medium mb-1">{l}</label>
                   <input value={(form as any)[k]} onChange={e => setForm(f=>({...f,[k]:e.target.value}))} className="input" />
                 </div>
               ))}
+              <ImageInput
+                label="Logo thương hiệu"
+                value={form.logoUrl}
+                onChange={url => setForm(f => ({ ...f, logoUrl: url }))}
+                previewClass="h-16 w-16 object-contain"
+                minWidth={100}
+                minHeight={100}
+                dimensionHint="Khuyến nghị 200 × 200px • Vuông • Nền trong suốt (PNG)"
+              />
             </div>
             <div className="flex gap-3 px-6 pb-6">
               <button onClick={() => setShowForm(false)} className="btn-outline flex-1">Hủy</button>
