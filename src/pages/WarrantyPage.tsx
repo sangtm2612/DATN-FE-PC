@@ -4,6 +4,7 @@ import api from '@/lib/axios'
 import { formatDate } from '@/lib/utils'
 import type { Warranty } from '@/types'
 import { Search, Shield, CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 const STATUS_INFO: Record<string, { label: string; icon: typeof CheckCircle; color: string }> = {
   active:     { label: 'Còn hiệu lực',         icon: CheckCircle, color: 'text-green-500' },
@@ -13,14 +14,10 @@ const STATUS_INFO: Record<string, { label: string; icon: typeof CheckCircle; col
 }
 
 export default function WarrantyPage() {
-  const [serial, setSerial] = useState('')
   const [orderCode, setOrderCode] = useState('')
-  const [mode, setMode] = useState<'serial' | 'order'>('serial')
 
   const lookup = useMutation({
-    mutationFn: () => api.get<{ data: Warranty }>(
-      `/warranties/lookup?${mode === 'serial' ? `serial=${serial}` : `orderCode=${orderCode}`}`
-    ),
+    mutationFn: () => api.get<{ data: Warranty }>(`/warranties/lookup?orderCode=${orderCode}`),
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Không tìm thấy thông tin bảo hành!')
     },
@@ -38,51 +35,20 @@ export default function WarrantyPage() {
         <p className="text-gray-500">Tra cứu thông tin bảo hành sản phẩm đã mua tại KinhDuanPC</p>
       </div>
 
-      {/* Mode tabs */}
-      <div className="flex gap-1 p-1 bg-gray-100 rounded-xl mb-6">
-        {[
-          { key: 'serial', label: 'Số Serial máy' },
-          { key: 'order',  label: 'Mã đơn hàng' },
-        ].map(tab => (
-          <button key={tab.key}
-            onClick={() => setMode(tab.key as 'serial' | 'order')}
-            className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors
-              ${mode === tab.key ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
       {/* Search form */}
       <div className="card p-6 mb-6">
         <form onSubmit={e => { e.preventDefault(); lookup.mutate() }} className="space-y-4">
-          {mode === 'serial' ? (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Số Serial máy</label>
-              <input
-                value={serial}
-                onChange={e => setSerial(e.target.value)}
-                placeholder="Nhập số serial (VD: SN123456789)"
-                className="input"
-                required
-                autoFocus
-              />
-              <p className="text-xs text-gray-400 mt-1">Serial thường được dán dưới đáy máy hoặc trong hộp sản phẩm</p>
-            </div>
-          ) : (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Mã đơn hàng</label>
-              <input
-                value={orderCode}
-                onChange={e => setOrderCode(e.target.value.toUpperCase())}
-                placeholder="VD: HC-2026-000001"
-                className="input"
-                required
-                autoFocus
-              />
-            </div>
-          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Mã đơn hàng</label>
+            <input
+              value={orderCode}
+              onChange={e => setOrderCode(e.target.value.toUpperCase())}
+              placeholder="VD: HC-2026-000001"
+              className="input"
+              required
+              autoFocus
+            />
+          </div>
           <button type="submit" disabled={lookup.isPending}
             className="btn-primary w-full py-3 flex items-center justify-center gap-2">
             <Search size={16} />

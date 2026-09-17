@@ -106,6 +106,7 @@ export default function AdminUsersPage() {
       qc.invalidateQueries({ queryKey: ['admin-users'] })
       setSelectedUser(null)
     },
+    onError: (err: any) => toast.error(err?.response?.data?.message || 'Cập nhật thất bại'),
   })
 
   const updateRole = useMutation({
@@ -116,6 +117,7 @@ export default function AdminUsersPage() {
       qc.invalidateQueries({ queryKey: ['admin-users'] })
       setSelectedUser(null)
     },
+    onError: (err: any) => toast.error(err?.response?.data?.message || 'Đổi vai trò thất bại'),
   })
 
   const users: AdminUser[] = data?.data || []
@@ -321,7 +323,7 @@ function UserDetailModal({ userId, initialUser, onClose, onUpdateStatus, onUpdat
               <Mail size={14} className="text-gray-400" />
               <span className="text-gray-500">Email:</span>
               <span className="font-medium">{user.email}</span>
-              {user.emailVerified && <ShieldCheck size={13} className="text-green-500" title="Đã xác thực" />}
+              {user.emailVerified && <span title="Đã xác thực"><ShieldCheck size={13} className="text-green-500" /></span>}
             </div>
             {user.phone && (
               <div className="flex items-center gap-2">
@@ -379,12 +381,12 @@ function UserDetailModal({ userId, initialUser, onClose, onUpdateStatus, onUpdat
           <div className="border-t pt-5 space-y-3">
             <h4 className="text-sm font-semibold text-gray-700">Quản lý tài khoản</h4>
 
-            {/* Change role (only for non-admin accounts) */}
-            {user.role !== 'admin' && (
+            {/* Change role: only staff <-> technician; customer stays customer */}
+            {isStaff && user.role !== 'admin' && (
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Vai trò</label>
                 <div className="flex gap-2 flex-wrap">
-                  {['customer', 'staff', 'technician'].map(r => (
+                  {['staff', 'technician'].map(r => (
                     <button key={r}
                       disabled={isUpdating || user.role === r}
                       onClick={() => onUpdateRole(r)}

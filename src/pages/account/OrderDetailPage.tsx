@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { orderService } from '@/services/orderService'
 import { createVNPayPayment, createZaloPayPayment } from '@/services/paymentService'
 import { formatPrice, formatDate, ORDER_STATUS_LABEL, PAYMENT_METHOD_LABEL } from '@/lib/utils'
-import { ChevronLeft, Package, AlertCircle, Smartphone } from 'lucide-react'
+import { ChevronLeft, Package, AlertCircle, Smartphone, Tag, Truck, Receipt } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function OrderDetailPage() {
@@ -85,50 +85,87 @@ export default function OrderDetailPage() {
 
         {/* Payment */}
         <div className="card p-5">
-          <h3 className="font-semibold mb-3">Thanh toán</h3>
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm">{PAYMENT_METHOD_LABEL[order.paymentMethod]}</p>
-            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-              order.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' :
-              order.paymentStatus === 'failed' ? 'bg-red-100 text-red-700' :
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold flex items-center gap-2"><Receipt size={16} /> Thanh toán</h3>
+            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+              order.paymentStatus === 'paid'     ? 'bg-green-100 text-green-700' :
+              order.paymentStatus === 'failed'   ? 'bg-red-100 text-red-700' :
               order.paymentStatus === 'refunded' ? 'bg-purple-100 text-purple-700' :
               'bg-yellow-100 text-yellow-700'
             }`}>
-              {order.paymentStatus === 'paid' ? 'Đã thanh toán' :
-               order.paymentStatus === 'failed' ? 'Thất bại' :
-               order.paymentStatus === 'refunded' ? 'Đã hoàn tiền' :
-               'Chờ thanh toán'}
+              {order.paymentStatus === 'paid'     ? 'Đã thanh toán' :
+               order.paymentStatus === 'failed'   ? 'Thất bại' :
+               order.paymentStatus === 'refunded' ? 'Đã hoàn tiền' : 'Chờ thanh toán'}
             </span>
           </div>
-          <div className="space-y-1.5 text-sm">
+
+          <p className="text-xs text-gray-400 mb-3">{PAYMENT_METHOD_LABEL[order.paymentMethod]}</p>
+
+          <div className="space-y-2 text-sm">
+            {/* Subtotal */}
             <div className="flex justify-between text-gray-600">
-              <span>Tạm tính:</span><span>{formatPrice(order.subtotal)}</span>
+              <span>Tạm tính ({order.items.length} sản phẩm)</span>
+              <span>{formatPrice(order.subtotal)}</span>
             </div>
+
+            {/* Shipping */}
             <div className="flex justify-between text-gray-600">
-              <span>Phí ship:</span><span>{formatPrice(order.shippingFee)}</span>
+              <span className="flex items-center gap-1"><Truck size={12} /> Phí vận chuyển</span>
+              <span>{order.shippingFee > 0 ? formatPrice(order.shippingFee) : <span className="text-green-600 font-medium">Miễn phí</span>}</span>
             </div>
+
+            {/* Discount breakdown */}
             {order.discountAmount > 0 && (
-              <div className="flex justify-between text-green-600">
-                <span>Giảm giá:</span><span>-{formatPrice(order.discountAmount)}</span>
+              <div className="rounded-lg bg-green-50 border border-green-100 px-3 py-2 space-y-1">
+                <p className="text-xs font-semibold text-green-700 flex items-center gap-1">
+                  <Tag size={11} /> Ưu đãi áp dụng
+                </p>
+                {order.voucherCode ? (
+                  <div className="flex justify-between text-green-700 text-xs">
+                    <span className="flex items-center gap-1">
+                      Voucher <span className="font-mono bg-green-100 px-1.5 py-0.5 rounded font-bold">{order.voucherCode}</span>
+                    </span>
+                    <span className="font-semibold">-{formatPrice(order.discountAmount)}</span>
+                  </div>
+                ) : (
+                  <div className="flex justify-between text-green-700 text-xs">
+                    <span>Giảm giá tự động</span>
+                    <span className="font-semibold">-{formatPrice(order.discountAmount)}</span>
+                  </div>
+                )}
               </div>
             )}
-            <div className="flex justify-between font-bold text-base border-t pt-1.5">
-              <span>Tổng:</span><span className="text-primary-500">{formatPrice(order.totalAmount)}</span>
+
+            {/* Total */}
+            <div className="flex justify-between font-bold text-base border-t pt-2 mt-1">
+              <span>Tổng thanh toán</span>
+              <span className="text-primary-600 text-lg">{formatPrice(order.totalAmount)}</span>
             </div>
+
+            {/* Tiết kiệm */}
+            {order.discountAmount > 0 && (
+              <p className="text-xs text-center text-green-600 font-medium bg-green-50 rounded-lg py-1.5">
+                Bạn đã tiết kiệm {formatPrice(order.discountAmount)} cho đơn hàng này 🎉
+              </p>
+            )}
+
+            {/* Deposit */}
             {(order.depositAmount ?? 0) > 0 && (
-              <div className="border-t border-dashed pt-1.5 space-y-1.5">
+              <div className="border-t border-dashed pt-2 space-y-1.5 text-sm">
                 <div className="flex justify-between">
                   <span className={order.depositPaid ? 'text-green-600' : 'text-orange-600'}>
-                    {order.depositPaid ? 'Đã cọc:' : 'Cọc cần trả:'}
+                    {order.depositPaid ? 'Đã cọc' : 'Cọc cần trả'}
                   </span>
                   <span className={`font-semibold ${order.depositPaid ? 'text-green-600' : 'text-orange-600'}`}>
                     {formatPrice(order.depositAmount ?? 0)}
                   </span>
                 </div>
-                <div className="flex justify-between text-gray-600">
-                  <span>Còn lại khi nhận hàng:</span>
-                  <span className="font-medium">{formatPrice(order.remainingAmount ?? 0)}</span>
-                </div>
+                {!order.depositPaid && (
+                  <div className="flex justify-between text-gray-500">
+                    <span>Còn lại khi nhận hàng</span>
+                    <span className="font-medium">{formatPrice(order.remainingAmount ?? 0)}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -140,21 +177,26 @@ export default function OrderDetailPage() {
         <h3 className="font-semibold mb-4 flex items-center gap-2">
           <Package size={16} /> Sản phẩm ({order.items.length})
         </h3>
-        <div className="space-y-3">
+        <div className="divide-y">
           {order.items.map(item => (
-            <div key={item.id} className="flex items-center gap-4 py-2 border-b last:border-0">
+            <div key={item.id} className="flex items-center gap-4 py-3">
               <img src={item.productImage || '/placeholder.png'} alt={item.productName}
                 className="w-16 h-16 object-contain bg-gray-50 rounded-xl border flex-shrink-0" />
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <Link to={`/san-pham/${item.productId}`}
                   className="font-medium hover:text-primary-500 transition-colors line-clamp-2 text-sm">
                   {item.productName}
                 </Link>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  x{item.quantity} - Bảo hành {item.warrantyMonths} tháng
-                </p>
+                <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+                  <span>{formatPrice(item.unitPrice)} × {item.quantity}</span>
+                  {item.warrantyMonths > 0 && (
+                    <span className="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-medium">
+                      BH {item.warrantyMonths}T
+                    </span>
+                  )}
+                </div>
               </div>
-              <p className="font-bold text-sm text-gray-800 flex-shrink-0">{formatPrice(item.totalPrice)}</p>
+              <p className="font-bold text-sm text-primary-600 flex-shrink-0">{formatPrice(item.totalPrice)}</p>
             </div>
           ))}
         </div>

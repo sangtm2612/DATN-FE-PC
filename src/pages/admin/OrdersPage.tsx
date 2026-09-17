@@ -14,6 +14,15 @@ import type { OrderHistoryEntry } from '@/types'
 
 const STATUS_OPTS = ['', 'pending', 'confirmed', 'processing', 'shipping', 'delivered', 'completed', 'cancelled']
 
+const NEXT_STATUS: Record<string, string> = {
+  pending_deposit: 'pending',
+  pending: 'confirmed',
+  confirmed: 'processing',
+  processing: 'shipping',
+  shipping: 'delivered',
+  delivered: 'completed',
+}
+
 function useDebounce(delay: number) {
   const [timer, setTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
   return useCallback((fn: () => void) => {
@@ -29,7 +38,6 @@ export default function AdminOrdersPage() {
   const [page, setPage] = useState(0)
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [checkedIds, setCheckedIds] = useState<Set<number>>(new Set())
-  const [batchStatus, setBatchStatus] = useState('confirmed')
   const qc = useQueryClient()
   const debounce = useDebounce(400)
 
@@ -132,45 +140,41 @@ export default function AdminOrdersPage() {
       </div>
 
       {/* Batch action bar */}
-      {checkedIds.size > 0 && (
-        <div className="flex items-center gap-3 mb-3 px-4 py-3 bg-primary-50 border border-primary-200 rounded-lg">
-          <ListChecks size={18} className="text-primary-600 flex-shrink-0" />
-          <span className="text-sm font-semibold text-primary-700">Đã chọn {checkedIds.size} đơn</span>
-          {(() => {
-            const activeStatus = orders.find(o => checkedIds.has(o.id))?.status
-            return activeStatus ? (
-              <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${ORDER_STATUS_LABEL[activeStatus]?.color}`}>
-                {ORDER_STATUS_LABEL[activeStatus]?.label}
+      {checkedIds.size > 0 && (() => {
+        const curStatus = orders.find(o => checkedIds.has(o.id))?.status
+        const nextStatus = curStatus ? NEXT_STATUS[curStatus] : undefined
+        return (
+          <div className="flex items-center gap-3 mb-3 px-4 py-3 bg-primary-50 border border-primary-200 rounded-lg flex-wrap">
+            <ListChecks size={18} className="text-primary-600 flex-shrink-0" />
+            <span className="text-sm font-semibold text-primary-700">Đã chọn {checkedIds.size} đơn</span>
+            {curStatus && (
+              <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${ORDER_STATUS_LABEL[curStatus]?.color}`}>
+                {ORDER_STATUS_LABEL[curStatus]?.label}
               </span>
-            ) : null
-          })()}
-          <div className="flex items-center gap-2 ml-auto">
-            <span className="text-sm text-gray-600">Chuyển sang:</span>
-            <select
-              value={batchStatus}
-              onChange={e => setBatchStatus(e.target.value)}
-              className="border rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:border-primary-500"
-            >
-              {STATUS_OPTS.slice(1).map(s => (
-                <option key={s} value={s}>{ORDER_STATUS_LABEL[s]?.label}</option>
-              ))}
-            </select>
-            <button
-              onClick={() => batchUpdate.mutate({ ids: Array.from(checkedIds), status: batchStatus })}
-              disabled={batchUpdate.isPending}
-              className="bg-primary-500 hover:bg-primary-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-60"
-            >
-              {batchUpdate.isPending ? 'Đang cập nhật...' : 'Cập nhật'}
-            </button>
-            <button
-              onClick={() => setCheckedIds(new Set())}
-              className="text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg text-sm border"
-            >
-              Bỏ chọn
-            </button>
+            )}
+            <div className="flex items-center gap-2 ml-auto flex-wrap">
+              {nextStatus ? (
+                <button
+                  onClick={() => batchUpdate.mutate({ ids: Array.from(checkedIds), status: nextStatus })}
+                  disabled={batchUpdate.isPending}
+                  className="flex items-center gap-1.5 bg-primary-500 hover:bg-primary-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-60"
+                >
+                  <ArrowRight size={14} />
+                  {batchUpdate.isPending ? 'Đang cập nhật...' : `Chuyển → ${ORDER_STATUS_LABEL[nextStatus]?.label}`}
+                </button>
+              ) : (
+                <span className="text-xs text-gray-400 italic">Không có trạng thái tiếp theo</span>
+              )}
+              <button
+                onClick={() => setCheckedIds(new Set())}
+                className="text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-lg text-sm border"
+              >
+                Bỏ chọn
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Table */}
       <div className="card overflow-hidden">
@@ -195,9 +199,10 @@ export default function AdminOrdersPage() {
                   )
                 })()}
               </th>
-              {['Mã đơn', 'Khách hàng', 'Tổng tiền', 'Thanh toán', 'Trạng thái', 'Ngày đặt', ''].map(h => (
+              {['Mã đơn', 'Khách hàng', 'Tổng tiền', 'Thanh toán', 'Trạng thái', 'Ngày đặt'].map(h => (
                 <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
               ))}
+              <th className="px-4 py-3 w-40 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -248,11 +253,27 @@ export default function AdminOrdersPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{formatDate(order.createdAt, 'DD/MM/YYYY HH:mm')}</td>
-                <td className="px-4 py-3">
-                  <button onClick={e => { e.stopPropagation(); setSelectedOrder(order) }}
-                    className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors text-gray-500 hover:text-primary-500">
-                    <Eye size={16} />
-                  </button>
+                <td className="px-4 py-3 w-40">
+                  <div className="flex items-center justify-end gap-1">
+                    {NEXT_STATUS[order.status] && (
+                      <button
+                        onClick={e => {
+                          e.stopPropagation()
+                          updateStatus.mutate({ id: order.id, status: NEXT_STATUS[order.status] })
+                        }}
+                        disabled={updateStatus.isPending}
+                        title={`Chuyển → ${ORDER_STATUS_LABEL[NEXT_STATUS[order.status]]?.label}`}
+                        className="flex items-center gap-1 text-xs text-primary-600 hover:text-white hover:bg-primary-500 border border-primary-300 px-2 py-1 rounded-lg transition-colors whitespace-nowrap disabled:opacity-50"
+                      >
+                        <ArrowRight size={12} />
+                        {ORDER_STATUS_LABEL[NEXT_STATUS[order.status]]?.label}
+                      </button>
+                    )}
+                    <button onClick={e => { e.stopPropagation(); setSelectedOrder(order) }}
+                      className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors text-gray-500 hover:text-primary-500 flex-shrink-0">
+                      <Eye size={16} />
+                    </button>
+                  </div>
                 </td>
               </tr>
               )

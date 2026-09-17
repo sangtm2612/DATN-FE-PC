@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/axios'
-import { Plus, Ticket, Copy, Search, X, Edit2, Trash2 } from 'lucide-react'
+import { Plus, Ticket, Copy, Search, X, Edit2, Trash2, Globe, UserCheck, Percent, DollarSign, Truck } from 'lucide-react'
 import { formatPrice, formatDate } from '@/lib/utils'
 import toast from 'react-hot-toast'
 
@@ -203,25 +203,105 @@ export default function AdminVouchersPage() {
                 <label className="block text-sm font-medium mb-1">Tên mô tả</label>
                 <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="input" />
               </div>
+              {/* Loại voucher */}
               <div>
-                <label className="block text-sm font-medium mb-1">Loại voucher</label>
-                <select value={form.voucherType} onChange={e => setForm(f => ({ ...f, voucherType: e.target.value }))} className="input">
-                  <option value="PUBLIC">PUBLIC — Ai biết mã đều dùng được</option>
-                  <option value="PERSONAL">PERSONAL — Chỉ user được phân phối</option>
-                </select>
+                <label className="block text-sm font-medium mb-2">Loại voucher</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    {
+                      value: 'PUBLIC',
+                      icon: Globe,
+                      label: 'Công khai',
+                      desc: 'Ai có mã đều dùng được',
+                    },
+                    {
+                      value: 'PERSONAL',
+                      icon: UserCheck,
+                      label: 'Cá nhân',
+                      desc: 'Chỉ tài khoản được chỉ định',
+                    },
+                  ].map(opt => {
+                    const Icon = opt.icon
+                    const active = form.voucherType === opt.value
+                    return (
+                      <button key={opt.value} type="button"
+                        onClick={() => setForm(f => ({ ...f, voucherType: opt.value }))}
+                        className={`text-left p-3 rounded-xl border-2 transition-all ${
+                          active ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <Icon size={15} className={active ? 'text-primary-600' : 'text-gray-500'} />
+                          <span className={`text-sm font-semibold ${active ? 'text-primary-700' : 'text-gray-700'}`}>{opt.label}</span>
+                        </div>
+                        <p className="text-xs text-gray-500 leading-relaxed">{opt.desc}</p>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
+
+              {/* Loại giảm giá */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Loại giảm giá</label>
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  {[
+                    {
+                      value: 'percent',
+                      icon: Percent,
+                      label: 'Phần trăm',
+                      desc: 'Giảm X% tổng đơn. Thường dùng cho event lớn.',
+                      placeholder: 'VD: 10 (= 10%)',
+                      unit: '%',
+                    },
+                    {
+                      value: 'fixed_amount',
+                      icon: DollarSign,
+                      label: 'Số tiền cố định',
+                      desc: 'Giảm đúng X đồng. Dễ kiểm soát ngân sách.',
+                      placeholder: 'VD: 50000',
+                      unit: '₫',
+                    },
+                    {
+                      value: 'free_shipping',
+                      icon: Truck,
+                      label: 'Miễn phí ship',
+                      desc: 'Xóa toàn bộ phí vận chuyển. Không cần nhập giá trị.',
+                      placeholder: '—',
+                      unit: '',
+                    },
+                  ].map(opt => {
+                    const Icon = opt.icon
+                    const active = form.discountType === opt.value
+                    return (
+                      <button key={opt.value} type="button"
+                        onClick={() => setForm(f => ({ ...f, discountType: opt.value, discountValue: opt.value === 'free_shipping' ? 0 : f.discountValue }))}
+                        className={`text-left p-3 rounded-xl border-2 transition-all ${
+                          active ? 'border-orange-400 bg-orange-50' : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <Icon size={14} className={active ? 'text-orange-600' : 'text-gray-400'} />
+                          <span className={`text-xs font-semibold ${active ? 'text-orange-700' : 'text-gray-600'}`}>{opt.label}</span>
+                        </div>
+                        <p className="text-[11px] text-gray-400 leading-snug">{opt.desc}</p>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Loại giảm giá</label>
-                  <select value={form.discountType} onChange={e => setForm(f => ({ ...f, discountType: e.target.value }))} className="input">
-                    <option value="percent">Phần trăm (%)</option>
-                    <option value="fixed_amount">Số tiền cố định</option>
-                    <option value="free_shipping">Miễn phí ship</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Giá trị giảm *</label>
-                  <input type="number" value={form.discountValue} onChange={e => setForm(f => ({ ...f, discountValue: +e.target.value }))} className="input" />
+                  <label className="block text-sm font-medium mb-1">
+                    Giá trị giảm {form.discountType === 'percent' ? '(%)' : form.discountType === 'fixed_amount' ? '(₫)' : ''}
+                    {form.discountType !== 'free_shipping' && ' *'}
+                  </label>
+                  <input type="number" value={form.discountValue}
+                    disabled={form.discountType === 'free_shipping'}
+                    onChange={e => setForm(f => ({ ...f, discountValue: +e.target.value }))}
+                    className="input disabled:bg-gray-50 disabled:text-gray-400"
+                    placeholder={form.discountType === 'percent' ? 'VD: 10' : form.discountType === 'fixed_amount' ? 'VD: 50000' : 'Tự động'} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Đơn tối thiểu</label>

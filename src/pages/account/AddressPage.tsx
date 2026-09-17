@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/axios'
-import { Plus, Edit, Trash2, Star } from 'lucide-react'
+import { addressService } from '@/services/addressService'
+import { Plus, Edit, Trash2, Star, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface Address {
@@ -13,6 +14,7 @@ interface Address {
 export default function AddressPage() {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Address | null>(null)
+  const [selectedProvinceCode, setSelectedProvinceCode] = useState<number | null>(null)
   const qc = useQueryClient()
 
   const { data: addresses } = useQuery({
@@ -20,7 +22,28 @@ export default function AddressPage() {
     queryFn: () => api.get<{ data: Address[] }>('/users/addresses').then(r => r.data.data || []),
   })
 
+  const { data: provinces } = useQuery({
+    queryKey: ['provinces'],
+    queryFn: addressService.getProvinces,
+    staleTime: Infinity,
+  })
+
+  const { data: wards } = useQuery({
+    queryKey: ['wards', selectedProvinceCode],
+    queryFn: async () => {
+      if (!selectedProvinceCode) return []
+      const province = await addressService.getProvinceDirect(selectedProvinceCode)
+      return province.districts?.flatMap((d: any) => d.wards || []) || []
+    },
+    enabled: !!selectedProvinceCode,
+  })
+
   const [form, setForm] = useState({ fullName:'', phone:'', province:'', district:'', ward:'', addressDetail:'', isDefault: false })
+
+  const closeForm = () => {
+    setShowForm(false); setEditing(null); setSelectedProvinceCode(null)
+    setForm({ fullName:'', phone:'', province:'', district:'', ward:'', addressDetail:'', isDefault: false })
+  }
 
   const save = useMutation({
     mutationFn: () => editing
@@ -29,8 +52,7 @@ export default function AddressPage() {
     onSuccess: () => {
       toast.success(editing ? 'Đã cập nhật địa chỉ' : 'Đã thêm địa chỉ mới')
       qc.invalidateQueries({ queryKey: ['addresses'] })
-      setShowForm(false); setEditing(null)
-      setForm({ fullName:'', phone:'', province:'', district:'', ward:'', addressDetail:'', isDefault: false })
+      closeForm()
     },
   })
 
@@ -49,7 +71,7 @@ export default function AddressPage() {
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold">Địa chỉ giao hàng</h2>
         {(addresses?.length || 0) < 5 && (
-          <button onClick={() => { setShowForm(true); setEditing(null) }}
+          <button onClick={() => { setShowForm(true); setEditing(null); setSelectedProvinceCode(null) }}
             className="btn-primary flex items-center gap-2 px-4 py-2 text-sm">
             <Plus size={15} /> Thêm địa chỉ mới
           </button>
@@ -86,7 +108,7 @@ export default function AddressPage() {
                       Đặt mặc định
                     </button>
                   )}
-                  <button onClick={() => { setEditing(addr); setForm({ ...addr }); setShowForm(true) }}
+                  <button onClick={() => { setEditing(addr); setForm({ ...addr }); setSelectedProvinceCode(null); setShowForm(true) }}
                     className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-primary-500 transition-colors">
                     <Edit size={15} />
                   </button>
@@ -106,29 +128,70 @@ export default function AddressPage() {
       {/* Form modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl">
-            <div className="flex items-center justify-between px-6 py-4 border-b">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white">
               <h3 className="font-bold text-lg">{editing ? 'Sửa địa chỉ' : 'Thêm địa chỉ mới'}</h3>
-              <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-700">X</button>
+              <button onClick={closeForm} className="p-1 rounded-lg hover:bg-gray-100"><X size={18} /></button>
             </div>
             <div className="p-6 grid grid-cols-2 gap-4">
-              {[
-                { key: 'fullName', label: 'Họ và tên', span: 2 },
-                { key: 'phone', label: 'Số điện thoại' },
-                { key: 'province', label: 'Tỉnh/Thành phố' },
-                { key: 'district', label: 'Quận/Huyện' },
-                { key: 'ward', label: 'Phường/Xã' },
-                { key: 'addressDetail', label: 'Địa chỉ chi tiết', span: 2 },
-              ].map(({ key, label, span }) => (
-                <div key={key} className={span === 2 ? 'col-span-2' : ''}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-                  <input
-                    value={(form as any)[key]}
-                    onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
-                    className="input"
-                  />
-                </div>
-              ))}
+              {/* Họ tên */}
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Họ và tên *</label>
+                <input value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))} className="input" />
+              </div>
+              {/* Điện thoại */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại *</label>
+                <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} className="input" />
+              </div>
+              {/* Tỉnh/Thành phố */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tỉnh/Thành phố *</label>
+                {form.province && !selectedProvinceCode ? (
+                  <div className="flex items-center gap-2">
+                    <span className="input bg-gray-50 flex-1 text-sm">{form.province}</span>
+                    <button type="button" onClick={() => setForm(f => ({ ...f, province: '', district: '', ward: '' }))}
+                      className="text-xs text-primary-500 hover:underline whitespace-nowrap">Thay đổi</button>
+                  </div>
+                ) : (
+                  <select className="input" defaultValue=""
+                    onChange={e => {
+                      const code = Number(e.target.value)
+                      const p = provinces?.find(x => x.code === code)
+                      if (p) { setSelectedProvinceCode(code); setForm(f => ({ ...f, province: p.name, district: p.name, ward: '' })) }
+                    }}>
+                    <option value="" disabled>Chọn tỉnh/thành phố</option>
+                    {provinces?.map(p => <option key={p.code} value={p.code}>{p.name}</option>)}
+                  </select>
+                )}
+              </div>
+              {/* Phường/Xã */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phường/Xã/Thị trấn *</label>
+                {form.ward && !selectedProvinceCode ? (
+                  <div className="flex items-center gap-2">
+                    <span className="input bg-gray-50 flex-1 text-sm">{form.ward}</span>
+                    <button type="button" onClick={() => setForm(f => ({ ...f, ward: '' }))}
+                      className="text-xs text-primary-500 hover:underline whitespace-nowrap">Thay đổi</button>
+                  </div>
+                ) : (
+                  <select className="input" defaultValue="" disabled={!selectedProvinceCode}
+                    onChange={e => {
+                      const w = wards?.find((x: any) => x.code === Number(e.target.value))
+                      if (w) setForm(f => ({ ...f, ward: (w as any).name }))
+                    }}>
+                    <option value="" disabled>Chọn phường/xã/thị trấn</option>
+                    {wards?.map((w: any) => <option key={w.code} value={w.code}>{w.name}</option>)}
+                  </select>
+                )}
+              </div>
+              {/* Địa chỉ chi tiết */}
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ chi tiết *</label>
+                <input value={form.addressDetail} onChange={e => setForm(f => ({ ...f, addressDetail: e.target.value }))}
+                  className="input" placeholder="Số nhà, tên đường..." />
+              </div>
+              {/* Mặc định */}
               <div className="col-span-2">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={form.isDefault}
@@ -139,7 +202,7 @@ export default function AddressPage() {
               </div>
             </div>
             <div className="flex gap-3 px-6 pb-6">
-              <button onClick={() => setShowForm(false)} className="btn-outline flex-1 py-2.5">Hủy</button>
+              <button onClick={closeForm} className="btn-outline flex-1 py-2.5">Hủy</button>
               <button onClick={() => save.mutate()} disabled={save.isPending} className="btn-primary flex-1 py-2.5">
                 {save.isPending ? 'Đang lưu...' : 'Lưu địa chỉ'}
               </button>

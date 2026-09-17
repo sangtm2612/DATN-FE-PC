@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/axios'
-import { Plus, Percent, Edit2, Trash2, X } from 'lucide-react'
+import { Plus, Percent, Edit2, Trash2, X, Search, Package } from 'lucide-react'
 import { formatPrice, formatDate } from '@/lib/utils'
-import type { Category, Brand } from '@/types'
+import type { Category, Brand, Product, ApiResponse } from '@/types'
 import toast from 'react-hot-toast'
 
 interface Promotion {
@@ -43,19 +43,24 @@ function flattenCategoryTree(
   return out
 }
 
+type SelectedProduct = { id: number; name: string }
+
 const emptyForm = {
   promotionType: 'general', name: '', description: '',
   discountType: 'percent', discountValue: 0, minOrderValue: 0, maxDiscount: '',
   startDate: '', endDate: '', isActive: true,
   buildpcMinCpuDiscountPct: '', buildpcMaxCpuDiscountPct: '',
   buildpcCashBonus: '', buildpcMaxCashBonus: '',
-  productIds: '', categoryIds: [] as number[], brandIds: [] as number[],
+  productIds: [] as SelectedProduct[], categoryIds: [] as number[], brandIds: [] as number[],
 }
 
 export default function AdminPromotionsPage() {
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId] = useState<number | null>(null)
   const [form, setForm] = useState(emptyForm)
+  const [productSearch, setProductSearch] = useState('')
+  const [showProductDropdown, setShowProductDropdown] = useState(false)
+  const productInputRef = useRef<HTMLInputElement>(null)
   const qc = useQueryClient()
 
   const { data: promotions } = useQuery({
@@ -73,6 +78,23 @@ export default function AdminPromotionsPage() {
     queryFn: () => api.get<{ data: Brand[] }>('/brands').then(r => r.data.data || []),
   })
 
+  const { data: productSearchResults } = useQuery({
+    queryKey: ['product-picker-search', productSearch],
+    queryFn: () => api.get<ApiResponse<Product[]>>(`/products/search?keyword=${encodeURIComponent(productSearch)}&size=10&page=0`).then(r => r.data.data || []),
+    enabled: productSearch.trim().length >= 2,
+  })
+
+  const addProduct = (p: Product) => {
+    if (form.productIds.some(x => x.id === p.id)) return
+    setForm(f => ({ ...f, productIds: [...f.productIds, { id: p.id, name: p.name }] }))
+    setProductSearch('')
+    setShowProductDropdown(false)
+  }
+
+  const removeProduct = (id: number) => {
+    setForm(f => ({ ...f, productIds: f.productIds.filter(x => x.id !== id) }))
+  }
+
   const save = useMutation({
     mutationFn: () => {
       const payload = {
@@ -82,7 +104,7 @@ export default function AdminPromotionsPage() {
         buildpcMaxCpuDiscountPct: form.buildpcMaxCpuDiscountPct || null,
         buildpcCashBonus: form.buildpcCashBonus || null,
         buildpcMaxCashBonus: form.buildpcMaxCashBonus || null,
-        productIds: form.productIds ? form.productIds.split(',').map(s => +s.trim()).filter(Boolean) : [],
+        productIds: form.productIds.map(p => p.id),
       }
       return editId
         ? api.put(`/promotions/${editId}`, payload)
@@ -128,7 +150,7 @@ export default function AdminPromotionsPage() {
       buildpcMaxCpuDiscountPct: p.buildpcMaxCpuDiscountPct != null ? String(p.buildpcMaxCpuDiscountPct) : '',
       buildpcCashBonus: p.buildpcCashBonus != null ? String(p.buildpcCashBonus) : '',
       buildpcMaxCashBonus: p.buildpcMaxCashBonus != null ? String(p.buildpcMaxCashBonus) : '',
-      productIds: p.productIds?.join(',') || '',
+      productIds: p.productIds?.map(id => ({ id, name: `SP #${id}` })) || [],
       categoryIds: p.categoryIds || [],
       brandIds: p.brandIds || [],
     })
@@ -139,6 +161,8 @@ export default function AdminPromotionsPage() {
     setShowForm(false)
     setEditId(null)
     setForm(emptyForm)
+    setProductSearch('')
+    setShowProductDropdown(false)
   }
 
   return (
@@ -271,9 +295,62 @@ export default function AdminPromotionsPage() {
               )}
 
               <div className="border-t pt-4">
-                <label className="block text-sm font-medium mb-1">Phạm vi áp dụng (để trống = toàn bộ sản phẩm)</label>
-                <input value={form.productIds} onChange={e => setForm(f => ({ ...f, productIds: e.target.value }))}
-                  className="input mb-3" placeholder="ID sản phẩm, cách nhau bởi dấu phẩy (VD: 12,15,20)" />
+                <label className="block text-sm font-medium mb-2">Phạm vi áp dụng (để trống = toàn bộ sản phẩm)</label>
+
+                {/* Selected product chips */}
+                {form.productIds.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {form.productIds.map(p => (
+                      <span key={p.id} className="flex items-center gap-1 text-xs bg-primary-50 text-primary-700 border border-primary-200 px-2 py-1 rounded-full">
+                        <Package size={10} className="flex-shrink-0" />
+                        <span className="max-w-[160px] truncate">{p.name}</span>
+                        <button type="button" onClick={() => removeProduct(p.id)} className="hover:text-red-500 flex-shrink-0">
+                          <X size={10} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Product search input */}
+                <div className="relative mb-3">
+                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  <input
+                    ref={productInputRef}
+                    value={productSearch}
+                    onChange={e => { setProductSearch(e.target.value); setShowProductDropdown(true) }}
+                    onFocus={() => productSearch.trim().length >= 2 && setShowProductDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowProductDropdown(false), 150)}
+                    placeholder="Tìm sản phẩm theo tên..."
+                    className="input pl-8 pr-8"
+                  />
+                  {productSearch && (
+                    <button type="button" onMouseDown={e => { e.preventDefault(); setProductSearch(''); setShowProductDropdown(false) }}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                      <X size={14} />
+                    </button>
+                  )}
+                  {showProductDropdown && productSearch.trim().length >= 2 && (
+                    <div className="absolute top-full left-0 right-0 z-20 bg-white border rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
+                      {(productSearchResults?.length ?? 0) > 0 ? productSearchResults!.map(p => {
+                        const already = form.productIds.some(x => x.id === p.id)
+                        return (
+                          <button key={p.id} type="button"
+                            onMouseDown={e => { e.preventDefault(); if (!already) addProduct(p) }}
+                            className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 ${already ? 'opacity-40 cursor-default' : 'hover:bg-gray-50 cursor-pointer'}`}
+                          >
+                            <Package size={12} className="text-gray-400 flex-shrink-0" />
+                            <span className="flex-1 truncate">{p.name}</span>
+                            <span className="text-xs text-gray-400 flex-shrink-0">{formatPrice(p.price)}</span>
+                            {already && <span className="text-xs text-primary-500 flex-shrink-0">Đã chọn</span>}
+                          </button>
+                        )
+                      }) : (
+                        <p className="px-3 py-3 text-sm text-gray-400 text-center">Không tìm thấy sản phẩm</p>
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 {!!categories?.length && (
                   <div className="mb-3">

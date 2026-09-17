@@ -151,7 +151,7 @@ export default function BuildPCPage() {
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Cpu className="text-primary-500" size={24} /> Build PC
           </h1>
-          <p className="text-gray-500 text-sm mt-1">Tự chọn linh kiện — Kiểm tra tương thích — Giảm giá tới 50% CPU</p>
+          <p className="text-gray-500 text-sm mt-1">Tự chọn linh kiện — Kiểm tra tương thích tự động</p>
         </div>
         <input
           value={buildName}
@@ -161,14 +161,7 @@ export default function BuildPCPage() {
         />
       </div>
 
-      {/* Promo banner */}
-      <div className="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-xl p-4 mb-6 text-gray-900">
-        <p className="font-bold">Ưu đãi Build PC:</p>
-        <p className="text-sm mt-1">Giảm <strong>30%</strong> CPU khi chọn đủ Main + RAM + SSD + Nguồn + Case</p>
-        <p className="text-sm">Giảm <strong>50%</strong> CPU khi chọn thêm VGA từ RX6500XT/RTX3050 trở lên</p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Component selector */}
         <div className="lg:col-span-2">
           <div className="space-y-2">

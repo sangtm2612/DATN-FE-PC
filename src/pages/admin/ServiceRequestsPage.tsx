@@ -113,7 +113,7 @@ export default function AdminServiceRequestsPage() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b">
             <tr>
-              {['Mã YC', 'Khách hàng', 'Sản phẩm', 'Trạng thái', 'Báo giá', 'Ngày gửi', 'Thao tác'].map(h => (
+              {['Mã YC', 'Khách hàng', 'Sản phẩm', 'Kỹ thuật viên', 'Trạng thái', 'Báo giá', 'Ngày gửi', 'Thao tác'].map(h => (
                 <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{h}</th>
               ))}
             </tr>
@@ -126,7 +126,13 @@ export default function AdminServiceRequestsPage() {
                   <p className="font-medium">{sr.userName}</p>
                   <p className="text-gray-400 text-xs">{sr.userPhone}</p>
                 </td>
-                <td className="px-4 py-3">{sr.productName}</td>
+                <td className="px-4 py-3 max-w-[160px] truncate">{sr.productName}</td>
+                <td className="px-4 py-3">
+                  {sr.technicianName
+                    ? <span className="text-sm font-medium text-gray-700">{sr.technicianName}</span>
+                    : <span className="text-xs text-gray-400 italic">Chưa gán</span>
+                  }
+                </td>
                 <td className="px-4 py-3">
                   <span className={`text-xs font-semibold px-2 py-1 rounded-full ${STATUS_COLOR[sr.status] || 'bg-gray-100 text-gray-600'}`}>
                     {STATUS_LABEL[sr.status]}

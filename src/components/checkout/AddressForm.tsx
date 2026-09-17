@@ -13,36 +13,37 @@ interface AddressFormProps {
 export default function AddressForm({ register, errors, setValue, watch }: AddressFormProps) {
   const [selectedProvinceCode, setSelectedProvinceCode] = useState<number | null>(null)
 
-  // Lấy danh sách tỉnh/thành phố
+  const currentProvince = watch('shippingProvince')
+  const currentWard = watch('shippingWard')
+
   const { data: provinces } = useQuery({
     queryKey: ['provinces'],
     queryFn: addressService.getProvinces,
     staleTime: Infinity,
   })
 
-  // Lấy danh sách phường/xã theo tỉnh (bỏ cấp huyện)
   const { data: wards } = useQuery({
     queryKey: ['wards', selectedProvinceCode],
     queryFn: async () => {
       if (!selectedProvinceCode) return []
-      // Lấy province với depth=3 để có tất cả wards
       const province = await addressService.getProvinceDirect(selectedProvinceCode)
-      // Flatten tất cả wards từ các districts
-      const allWards = province.districts?.flatMap(d => d.wards || []) || []
-      return allWards
+      return province.districts?.flatMap((d: any) => d.wards || []) || []
     },
     enabled: !!selectedProvinceCode,
   })
 
+  // Khi form được pre-fill từ bên ngoài (ví dụ chọn địa chỉ đã lưu),
+  // reset selectedProvinceCode để select không hiển thị sai
+  useEffect(() => {
+    if (!currentProvince) setSelectedProvinceCode(null)
+  }, [currentProvince])
+
   const handleProvinceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const code = Number(e.target.value)
     const province = provinces?.find(p => p.code === code)
-    
     if (province) {
       setSelectedProvinceCode(code)
       setValue('shippingProvince', province.name)
-      
-      // Reset ward và set district = province name (vì bỏ cấp huyện)
       setValue('shippingDistrict', province.name)
       setValue('shippingWard', '')
     }
@@ -50,27 +51,30 @@ export default function AddressForm({ register, errors, setValue, watch }: Addre
 
   const handleWardChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const code = Number(e.target.value)
-    const ward = wards?.find(w => w.code === code)
-    
-    if (ward) {
-      setValue('shippingWard', ward.name)
-    }
+    const ward = wards?.find((w: any) => w.code === code)
+    if (ward) setValue('shippingWard', ward.name)
   }
 
   return (
     <>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Tỉnh/Thành phố *</label>
-        <select 
-          onChange={handleProvinceChange}
-          className="input"
-          defaultValue=""
-        >
-          <option value="" disabled>Chọn tỉnh/thành phố</option>
-          {provinces?.map(p => (
-            <option key={p.code} value={p.code}>{p.name}</option>
-          ))}
-        </select>
+        {/* Nếu đã có giá trị pre-fill, hiển thị text và cho phép thay đổi */}
+        {currentProvince && !selectedProvinceCode ? (
+          <div className="flex items-center gap-2">
+            <span className="input bg-gray-50 flex-1 text-gray-700">{currentProvince}</span>
+            <button type="button"
+              onClick={() => { setValue('shippingProvince', ''); setValue('shippingWard', '') }}
+              className="text-xs text-primary-500 hover:underline whitespace-nowrap">Thay đổi</button>
+          </div>
+        ) : (
+          <select onChange={handleProvinceChange} className="input" defaultValue="">
+            <option value="" disabled>Chọn tỉnh/thành phố</option>
+            {provinces?.map(p => (
+              <option key={p.code} value={p.code}>{p.name}</option>
+            ))}
+          </select>
+        )}
         <input type="hidden" {...register('shippingProvince')} />
         <input type="hidden" {...register('shippingDistrict')} />
         {errors.shippingProvince && <p className="text-red-500 text-xs mt-1">{errors.shippingProvince.message as string}</p>}
@@ -78,17 +82,22 @@ export default function AddressForm({ register, errors, setValue, watch }: Addre
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Phường/Xã/Thị trấn *</label>
-        <select 
-          onChange={handleWardChange}
-          className="input"
-          disabled={!selectedProvinceCode}
-          defaultValue=""
-        >
-          <option value="" disabled>Chọn phường/xã/thị trấn</option>
-          {wards?.map(w => (
-            <option key={w.code} value={w.code}>{w.name}</option>
-          ))}
-        </select>
+        {currentWard && !selectedProvinceCode ? (
+          <div className="flex items-center gap-2">
+            <span className="input bg-gray-50 flex-1 text-gray-700">{currentWard}</span>
+            <button type="button"
+              onClick={() => setValue('shippingWard', '')}
+              className="text-xs text-primary-500 hover:underline whitespace-nowrap">Thay đổi</button>
+          </div>
+        ) : (
+          <select onChange={handleWardChange} className="input"
+            disabled={!selectedProvinceCode} defaultValue="">
+            <option value="" disabled>Chọn phường/xã/thị trấn</option>
+            {wards?.map((w: any) => (
+              <option key={w.code} value={w.code}>{w.name}</option>
+            ))}
+          </select>
+        )}
         <input type="hidden" {...register('shippingWard')} />
         {errors.shippingWard && <p className="text-red-500 text-xs mt-1">{errors.shippingWard.message as string}</p>}
       </div>

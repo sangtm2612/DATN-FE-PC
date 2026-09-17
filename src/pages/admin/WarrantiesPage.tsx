@@ -19,7 +19,6 @@ export default function AdminWarrantiesPage() {
   const [page, setPage] = useState(0)
   const [search, setSearch] = useState('')
   const [editingId, setEditingId] = useState<number | null>(null)
-  const [editSerial, setEditSerial] = useState('')
   const [editNotes, setEditNotes]   = useState('')
   const [historyId, setHistoryId]   = useState<number | null>(null)
   const qc = useQueryClient()
@@ -31,9 +30,9 @@ export default function AdminWarrantiesPage() {
         .then(r => r.data),
   })
 
-  const updateSerial = useMutation({
-    mutationFn: ({ id, serialNumber, notes }: { id: number; serialNumber: string; notes: string }) =>
-      api.patch(`/warranties/admin/${id}?serialNumber=${encodeURIComponent(serialNumber)}&notes=${encodeURIComponent(notes)}`),
+  const updateNotes = useMutation({
+    mutationFn: ({ id, notes }: { id: number; notes: string }) =>
+      api.patch(`/warranties/admin/${id}?notes=${encodeURIComponent(notes)}`),
     onSuccess: () => {
       toast.success('Cập nhật thành công')
       setEditingId(null)
@@ -48,7 +47,6 @@ export default function AdminWarrantiesPage() {
   const filtered = search.trim()
     ? warranties.filter(w =>
         w.product.name.toLowerCase().includes(search.toLowerCase()) ||
-        (w.serialNumber?.toLowerCase().includes(search.toLowerCase())) ||
         (w.userName?.toLowerCase().includes(search.toLowerCase())) ||
         (w.userPhone?.includes(search))
       )
@@ -56,7 +54,6 @@ export default function AdminWarrantiesPage() {
 
   const startEdit = (w: Warranty) => {
     setEditingId(w.id)
-    setEditSerial(w.serialNumber || '')
     setEditNotes(w.notes || '')
   }
 
@@ -113,7 +110,7 @@ export default function AdminWarrantiesPage() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b">
             <tr>
-              {['Sản phẩm', 'Khách hàng', 'Serial number', 'Ngày mua', 'Hết hạn', 'Trạng thái', ''].map(h => (
+              {['Sản phẩm', 'Khách hàng', 'Ngày mua', 'Hết hạn', 'Trạng thái', ''].map(h => (
                 <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
               ))}
             </tr>
@@ -134,28 +131,6 @@ export default function AdminWarrantiesPage() {
                   <p className="font-medium">{w.userName || '—'}</p>
                   <p className="text-xs text-gray-400">{w.userPhone || ''}</p>
                 </td>
-                <td className="px-4 py-3">
-                  {editingId === w.id ? (
-                    <div className="space-y-1">
-                      <input
-                        value={editSerial}
-                        onChange={e => setEditSerial(e.target.value)}
-                        placeholder="Nhập serial..."
-                        className="border rounded px-2 py-1 text-xs w-36 focus:outline-none focus:border-primary-500"
-                      />
-                      <input
-                        value={editNotes}
-                        onChange={e => setEditNotes(e.target.value)}
-                        placeholder="Ghi chú..."
-                        className="border rounded px-2 py-1 text-xs w-36 focus:outline-none focus:border-primary-500"
-                      />
-                    </div>
-                  ) : (
-                    <span className={w.serialNumber ? 'font-mono text-xs' : 'text-gray-400 text-xs italic'}>
-                      {w.serialNumber || 'Chưa có serial'}
-                    </span>
-                  )}
-                </td>
                 <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{formatDate(w.purchaseDate, 'DD/MM/YYYY')}</td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   <span className={`text-xs ${
@@ -174,10 +149,16 @@ export default function AdminWarrantiesPage() {
                 </td>
                 <td className="px-4 py-3">
                   {editingId === w.id ? (
-                    <div className="flex gap-1">
+                    <div className="flex items-center gap-1">
+                      <input
+                        value={editNotes}
+                        onChange={e => setEditNotes(e.target.value)}
+                        placeholder="Ghi chú..."
+                        className="border rounded px-2 py-1 text-xs w-32 focus:outline-none focus:border-primary-500"
+                      />
                       <button
-                        onClick={() => updateSerial.mutate({ id: w.id, serialNumber: editSerial, notes: editNotes })}
-                        disabled={updateSerial.isPending}
+                        onClick={() => updateNotes.mutate({ id: w.id, notes: editNotes })}
+                        disabled={updateNotes.isPending}
                         className="p-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
                         title="Lưu"
                       >
@@ -196,7 +177,7 @@ export default function AdminWarrantiesPage() {
                       <button
                         onClick={() => startEdit(w)}
                         className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors text-gray-500 hover:text-primary-500"
-                        title="Nhập serial / ghi chú"
+                        title="Ghi chú"
                       >
                         <Edit2 size={16} />
                       </button>

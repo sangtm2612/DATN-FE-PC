@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useRef } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -14,8 +14,14 @@ import { PAYMENT_METHOD_LABEL } from '@/lib/utils'
 import api from '@/lib/axios'
 import toast from 'react-hot-toast'
 import type { ShippingMethod, Store } from '@/types'
-import { CreditCard, Banknote, Smartphone, Tag, Truck } from 'lucide-react'
+import { CreditCard, Banknote, Smartphone, Tag, Truck, MapPin, Plus } from 'lucide-react'
 import AddressForm from '@/components/checkout/AddressForm'
+
+interface SavedAddress {
+  id: number; fullName: string; phone: string
+  province: string; district: string; ward: string
+  addressDetail: string; isDefault: boolean
+}
 
 const schema = z.object({
   shippingName:     z.string().min(2, 'Họ tên tối thiểu 2 ký tự'),
@@ -46,13 +52,21 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState('cod')
   const [depositPaymentMethod, setDepositPaymentMethod] = useState<'vnpay' | 'zalopay'>('vnpay')
   const [voucherCode, setVoucherCode] = useState('')
-  const isSubmittingRef = useRef(false) // Prevent double submission
+  const isSubmittingRef = useRef(false)
+  const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null)
+  const [showAddressList, setShowAddressList] = useState(false)
   
-  // Lấy config từ backend
   const { data: orderConfig } = useQuery({
     queryKey: ['orderConfig'],
     queryFn: getOrderConfig,
-    staleTime: 5 * 60 * 1000, // Cache 5 phút
+    staleTime: 5 * 60 * 1000,
+  })
+
+  // Địa chỉ đã lưu — chỉ fetch khi đã đăng nhập
+  const { data: savedAddresses } = useQuery({
+    queryKey: ['addresses'],
+    queryFn: () => api.get<{ data: SavedAddress[] }>('/users/addresses').then(r => r.data.data || []),
+    enabled: !!user,
   })
   
   const COD_DEPOSIT_FEE = orderConfig?.codDepositAmount || 100_000 // Fallback to 100k
@@ -118,9 +132,29 @@ export default function CheckoutPage() {
     defaultValues: {
       shippingName:  user?.fullName || '',
       shippingPhone: user?.phone || '',
-      guestEmail:    user?.email || '', // Pre-fill email if user is logged in
+      guestEmail:    user?.email || '',
     },
   })
+
+  const applyAddress = (addr: SavedAddress) => {
+    setSelectedAddressId(addr.id)
+    setShowAddressList(false)
+    setValue('shippingName', addr.fullName)
+    setValue('shippingPhone', addr.phone)
+    setValue('shippingProvince', addr.province)
+    setValue('shippingDistrict', addr.district)
+    setValue('shippingWard', addr.ward)
+    setValue('shippingAddress', addr.addressDetail)
+  }
+
+  // Auto-fill địa chỉ mặc định khi vào trang
+  useEffect(() => {
+    if (savedAddresses?.length) {
+      const def = savedAddresses.find(a => a.isDefault) ?? savedAddresses[0]
+      applyAddress(def)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedAddresses])
 
   const applyVoucher = useMutation({
     mutationFn: () => api.get(`/vouchers/check?code=${voucherCode}`),
@@ -262,6 +296,74 @@ export default function CheckoutPage() {
             {/* Shipping info */}
             <div className="card p-6">
               <h2 className="font-bold text-lg mb-4">Thông tin giao hàng</h2>
+
+              {/* Chọn từ địa chỉ đã lưu — chỉ hiện khi đã đăng nhập */}
+              {user && (
+                <div className="mb-5">
+                  {savedAddresses?.length ? (
+                    <div className="space-y-2">
+                      {/* Địa chỉ đang chọn */}
+                      {selectedAddressId && (() => {
+                        const addr = savedAddresses.find(a => a.id === selectedAddressId)
+                        return addr ? (
+                          <div className="flex items-start justify-between gap-3 p-3 bg-primary-50 border-2 border-primary-300 rounded-xl">
+                            <MapPin size={16} className="text-primary-500 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold">{addr.fullName} · {addr.phone}</p>
+                              <p className="text-sm text-gray-600 truncate">{addr.addressDetail}, {addr.ward}, {addr.province}</p>
+                            </div>
+                            <button type="button"
+                              onClick={() => setShowAddressList(v => !v)}
+                              className="text-xs text-primary-500 hover:underline whitespace-nowrap flex-shrink-0">
+                              {showAddressList ? 'Đóng' : 'Thay đổi'}
+                            </button>
+                          </div>
+                        ) : null
+                      })()}
+
+                      {/* Danh sách địa chỉ để chọn */}
+                      {(showAddressList || !selectedAddressId) && (
+                        <div className="space-y-2 mt-1">
+                          {savedAddresses.map(addr => (
+                            <button key={addr.id} type="button"
+                              onClick={() => applyAddress(addr)}
+                              className={`w-full text-left flex items-start gap-3 p-3 border-2 rounded-xl transition-colors
+                                ${selectedAddressId === addr.id
+                                  ? 'border-primary-400 bg-primary-50'
+                                  : 'border-gray-200 hover:border-primary-300 hover:bg-gray-50'}`}
+                            >
+                              <MapPin size={15} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-sm font-medium">{addr.fullName}</span>
+                                  <span className="text-sm text-gray-500">{addr.phone}</span>
+                                  {addr.isDefault && (
+                                    <span className="text-xs bg-primary-100 text-primary-600 px-1.5 py-0.5 rounded-full font-medium">Mặc định</span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-gray-500 mt-0.5 truncate">{addr.addressDetail}, {addr.ward}, {addr.province}</p>
+                              </div>
+                            </button>
+                          ))}
+                          <Link to="/account/addresses" target="_blank"
+                            className="flex items-center gap-2 text-sm text-primary-500 hover:underline px-1 py-1">
+                            <Plus size={14} /> Thêm địa chỉ mới
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-dashed border-gray-300 mb-2">
+                      <p className="text-sm text-gray-500">Chưa có địa chỉ đã lưu</p>
+                      <Link to="/account/addresses" target="_blank"
+                        className="text-sm text-primary-500 hover:underline flex items-center gap-1">
+                        <Plus size={14} /> Thêm ngay
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Họ và tên *</label>
